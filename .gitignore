@@ -218,3 +218,34 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Node.js and React
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+frontend/build/
+frontend/dist/
+.next/
+.vite/
+*.tsbuildinfo
+coverage/
+
+# Environment variables and credentials
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+
+# Local files
+*.log
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*.tmp
+.idea/
+.history/
