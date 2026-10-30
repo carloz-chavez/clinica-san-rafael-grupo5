@@ -4,11 +4,11 @@ Grupo 5 · SW705
 
 ## Alcance
 
-El proyecto contempla dos módulos: Historia Clínica Electrónica (M1) y Agenda y Citas Médicas (M2). Esta etapa prepara la estructura del repositorio; todavía no implementa historias de usuario ni integra servicios.
+El proyecto contempla dos módulos: Historia Clínica Electrónica (M1) y Agenda y Citas Médicas (M2). 
 
 ## Arquitectura
 
-La aplicación seguirá un monolito en capas con React, FastAPI/Python y PostgreSQL. Cada módulo separará rutas, servicios y repositorios. M2 validará pacientes a través de la interfaz de M1; no accederá directamente a sus repositorios.
+La aplicación seguirá un monolito en capas con React, FastAPI/Python y PostgreSQL. Cada módulo separará rutas, servicios y repositorios. M2 validará pacientes a través de la interfaz de M1;
 
 ## Estructura inicial
 
