@@ -76,8 +76,3 @@ Los cambios se proponen mediante pull request y requieren al menos una aprobaci�
 - Uso exclusivo de datos ficticios o anonimizados y ausencia de secretos en el repositorio.
 
 Metas por validar: apertura de la HCE en menos de 2 segundos con 8 000 pacientes y prevención transaccional de citas duplicadas mediante un índice único parcial en PostgreSQL.
-
-## Referencias
-
-- `Entregable1Caso_Clinica_SW705.docx`, secciones 5, 8 y 9.
-- `Guia_Practica_Semana9_SW705.docx`.
