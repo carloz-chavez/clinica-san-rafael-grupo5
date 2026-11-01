@@ -55,6 +55,10 @@ Cada carpeta de historia tiene las mismas capas (ADR 4 y ADR 5):
 
 Regla de dependencia: el enrutador llama al servicio y el servicio al repositorio, nunca al revés. **Un módulo no importa el repositorio de otro.** M2 solo usa `aplicacion.m1_hce.publico`.
 
+**Registro de enrutadores.** Cada historia crea su `enrutador.py` con una variable `enrutador = APIRouter(prefix="/pacientes", tags=["Pacientes"])`. `aplicacion/principal.py` ya tiene reservadas las rutas de los seis módulos (`MODULOS_ENRUTADORES`): al existir el archivo, el enrutador se registra solo. No hace falta editar `principal.py`.
+
+**Conexión a la base de datos.** El enrutador recibe `conexion: Connection = Depends(obtener_conexion)` y la pasa al servicio y al repositorio. Cada solicitud es una transacción: se confirma si termina bien y se revierte si lanza un error. `registrar_bitacora` recibe esa misma conexión, así la bitácora queda dentro de la misma transacción. Las filas llegan como diccionarios (`fila["id_paciente"]`).
+
 ## 3. Errores de la API
 
 Todo error devuelve `{"detalle": "mensaje", "codigo": "CODIGO"}`. Se lanza con `ErrorNegocio` (`aplicacion/nucleo/errores.py`).
@@ -66,6 +70,8 @@ Todo error devuelve `{"detalle": "mensaje", "codigo": "CODIGO"}`. Se lanza con `
 | 404 | No existe el recurso | `PACIENTE_NO_ENCONTRADO` |
 | 409 | Conflicto | `HORARIO_OCUPADO`, `DNI_DUPLICADO` |
 | 422 | Datos inválidos | `DATOS_INVALIDOS` |
+
+Los errores 422 incluyen además `campos`: una lista de `{"campo": "dni", "mensaje": "..."}`. Las rutas inexistentes (404, `NO_ENCONTRADO`), los errores internos (500, `ERROR_INTERNO`) y la falta de conexión con la base de datos (503, `BASE_DATOS_NO_DISPONIBLE`) usan el mismo formato.
 
 ## 4. Ramas, commits y pull requests
 
