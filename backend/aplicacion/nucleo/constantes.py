@@ -1,0 +1,33 @@
+"""Constantes compartidas por todos los modulos.
+
+Los valores coinciden con las restricciones CHECK del esquema de la base de datos.
+Si cambian aqui, deben cambiar en db/01_esquema.sql (y viceversa).
+"""
+
+# Roles de usuario (usuarios.rol)
+ROL_ADMISION = "ADMISION"
+ROL_MEDICO = "MEDICO"
+ROL_ADMINISTRADOR = "ADMINISTRADOR"
+ROLES_VALIDOS = (ROL_ADMISION, ROL_MEDICO, ROL_ADMINISTRADOR)
+
+# Estados de una cita (citas.estado)
+ESTADO_CITA_REGISTRADA = "registrada"
+ESTADO_CITA_CONFIRMADA = "confirmada"
+ESTADO_CITA_CANCELADA = "cancelada"
+ESTADO_CITA_ATENDIDA = "atendida"
+
+# Bitacora de auditoria (bitacora_auditoria.accion / bitacora_auditoria.entidad)
+ACCION_CONSULTA = "CONSULTA"
+ACCION_CREACION = "CREACION"
+ACCION_MODIFICACION = "MODIFICACION"
+ACCION_ANULACION = "ANULACION"
+ACCIONES_BITACORA = (ACCION_CONSULTA, ACCION_CREACION, ACCION_MODIFICACION, ACCION_ANULACION)
+
+ENTIDAD_HISTORIA = "HISTORIA"
+ENTIDAD_CONSULTA_MEDICA = "CONSULTA_MEDICA"
+ENTIDAD_RECETA_INDICACION = "RECETA_INDICACION"
+ENTIDADES_BITACORA = (ENTIDAD_HISTORIA, ENTIDAD_CONSULTA_MEDICA, ENTIDAD_RECETA_INDICACION)
+
+# Tipos de receta/indicacion (recetas_indicaciones.tipo)
+TIPO_RECETA = "RECETA"
+TIPO_INDICACION = "INDICACION"
