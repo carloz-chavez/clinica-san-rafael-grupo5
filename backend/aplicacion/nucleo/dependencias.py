@@ -1,6 +1,6 @@
-"""CONTRATO de seguridad compartido por todos los routers.
+"""Seguridad y dependencias de autenticacion (HU09).
 
-Uso en cualquier ruta protegida:
+Uso en rutas protegidas:
 
     from fastapi import Depends
     from aplicacion.nucleo.constantes import ROL_MEDICO
@@ -9,48 +9,76 @@ Uso en cualquier ruta protegida:
     @enrutador.post("/consultas")
     def registrar_consulta(usuario: UsuarioActual = Depends(requerir_roles(ROL_MEDICO))):
         ...
-
-Responsable: Angel (HU09, tarea A4). Hasta entonces funciona la autenticacion
-SIMULADA: se activa con AUTENTICACION_SIMULADA=true en el archivo .env.
 """
 from fastapi import Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+import jwt
 from pydantic import BaseModel
 
 from aplicacion.nucleo.configuracion import obtener_configuracion
 from aplicacion.nucleo.constantes import ROLES_VALIDOS
 from aplicacion.nucleo.errores import ErrorNegocio
 
+_esquema_token = HTTPBearer(auto_error=False)
+
 
 class UsuarioActual(BaseModel):
     id_usuario: int
     correo: str
     rol: str
+    id_medico: int | None = None
 
 
-def obtener_usuario_actual() -> UsuarioActual:
-    """Devuelve el usuario autenticado de la solicitud.
+def obtener_usuario_actual(
+    credenciales: HTTPAuthorizationCredentials | None = Depends(_esquema_token),
+) -> UsuarioActual:
+    """Valida el token Bearer JWT del encabezado Authorization y devuelve el usuario autenticado.
 
-    TEMPORAL: Angel reemplaza este cuerpo en la tarea A4 para leer y validar
-    el token JWT del encabezado Authorization. La firma NO debe cambiar.
+    Si no se envia token y AUTENTICACION_SIMULADA=true esta activo, entrega el usuario
+    simulado de desarrollo.
     """
     configuracion = obtener_configuracion()
-    if configuracion.autenticacion_simulada:
-        return UsuarioActual(
-            id_usuario=1,
-            correo="simulado@sanrafael.test",
-            rol=configuracion.rol_simulado.upper(),
+
+    if credenciales is None:
+        if configuracion.autenticacion_simulada:
+            return UsuarioActual(
+                id_usuario=1,
+                correo="simulado@sanrafael.test",
+                rol=configuracion.rol_simulado.upper(),
+            )
+        raise ErrorNegocio("NO_AUTENTICADO", "Se requiere iniciar sesion.", 401)
+
+    token = credenciales.credentials
+    try:
+        payload = jwt.decode(
+            token,
+            configuracion.clave_secreta_jwt,
+            algorithms=[configuracion.algoritmo_jwt],
         )
-    raise ErrorNegocio(
-        "AUTENTICACION_NO_DISPONIBLE",
-        "El inicio de sesion aun no esta implementado (HU09).",
-        401,
+    except jwt.ExpiredSignatureError:
+        raise ErrorNegocio("TOKEN_EXPIRADO", "La sesion ha expirado.", 401)
+    except jwt.PyJWTError:
+        raise ErrorNegocio("TOKEN_INVALIDO", "Token de sesion no valido.", 401)
+
+    id_usuario = payload.get("id_usuario")
+    correo = payload.get("correo")
+    rol = payload.get("rol")
+
+    if not id_usuario or not correo or not rol or rol not in ROLES_VALIDOS:
+        raise ErrorNegocio("TOKEN_INVALIDO", "El token no contiene informacion valida de usuario.", 401)
+
+    return UsuarioActual(
+        id_usuario=int(id_usuario),
+        correo=str(correo),
+        rol=str(rol),
+        id_medico=payload.get("id_medico"),
     )
 
 
 def requerir_roles(*roles_permitidos: str):
-    """Crea una dependencia que exige que el usuario tenga uno de los roles dados.
+    """Exige que el usuario tenga uno de los roles autorizados.
 
-    Responde 403 (ROL_NO_AUTORIZADO) si el rol no esta permitido (RNF02).
+    Devuelve 403 (ROL_NO_AUTORIZADO) si no cuenta con el rol requerido (RNF02).
     """
     for rol in roles_permitidos:
         if rol not in ROLES_VALIDOS:
