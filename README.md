@@ -52,6 +52,8 @@ uvicorn aplicacion.principal:aplicacion --reload
 
 Comprobar en `http://localhost:8000/salud` y la documentación en `http://localhost:8000/docs`.
 
+El archivo `.env` se lee automáticamente al arrancar. Para comprobar la conexión con la base de datos abre `http://localhost:8000/salud/base-datos`: responde 503 hasta que la base de datos esté levantada.
+
 **Base de datos:** pendiente de Carlos (tarea C1): `docker compose up` creará las tablas desde `db/01_esquema.sql`.
 
 **Frontend:** pendiente de Gonzalo (tarea G1).

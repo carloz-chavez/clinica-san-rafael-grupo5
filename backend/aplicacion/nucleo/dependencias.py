@@ -13,11 +13,10 @@ Uso en cualquier ruta protegida:
 Responsable: Angel (HU09, tarea A4). Hasta entonces funciona la autenticacion
 SIMULADA: se activa con AUTENTICACION_SIMULADA=true en el archivo .env.
 """
-import os
-
 from fastapi import Depends
 from pydantic import BaseModel
 
+from aplicacion.nucleo.configuracion import obtener_configuracion
 from aplicacion.nucleo.constantes import ROLES_VALIDOS
 from aplicacion.nucleo.errores import ErrorNegocio
 
@@ -34,11 +33,12 @@ def obtener_usuario_actual() -> UsuarioActual:
     TEMPORAL: Angel reemplaza este cuerpo en la tarea A4 para leer y validar
     el token JWT del encabezado Authorization. La firma NO debe cambiar.
     """
-    if os.getenv("AUTENTICACION_SIMULADA", "false").lower() == "true":
+    configuracion = obtener_configuracion()
+    if configuracion.autenticacion_simulada:
         return UsuarioActual(
             id_usuario=1,
             correo="simulado@sanrafael.test",
-            rol=os.getenv("ROL_SIMULADO", "MEDICO").upper(),
+            rol=configuracion.rol_simulado.upper(),
         )
     raise ErrorNegocio(
         "AUTENTICACION_NO_DISPONIBLE",
