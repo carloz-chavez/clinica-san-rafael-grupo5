@@ -133,6 +133,9 @@ __pypackages__/
 celerybeat-schedule*
 celerybeat.pid
 
+# Logs de validacion de la base de datos
+/db/ultima_validacion.log
+
 # Redis
 *.rdb
 *.aof
