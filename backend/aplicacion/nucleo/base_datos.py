@@ -37,9 +37,9 @@ def abrir_pool() -> None:
     configuracion = obtener_configuracion()
     _pool = ConnectionPool(
         conninfo=configuracion.base_datos_url,
-        min_size=1,
+        min_size=0,
         max_size=10,
-        kwargs={"row_factory": dict_row},
+        kwargs={"row_factory": dict_row, "connect_timeout": 1},
         open=False,
     )
     _pool.open(wait=False)
@@ -49,7 +49,7 @@ def cerrar_pool() -> None:
     """Cierra el pool al apagar la API."""
     global _pool
     if _pool is not None:
-        _pool.close()
+        _pool.close(timeout=1)
         _pool = None
 
 
@@ -62,7 +62,7 @@ def obtener_conexion() -> Iterator[Connection]:
             503,
         )
     try:
-        with _pool.connection(timeout=5) as conexion:
+        with _pool.connection(timeout=2) as conexion:
             yield conexion
     except PoolTimeout:
         raise ErrorNegocio(

@@ -24,7 +24,7 @@ class Configuracion(BaseSettings):
         extra="ignore",
     )
 
-    base_datos_url: str = "postgresql://clinica:clinica@localhost:5432/clinica_san_rafael"
+    base_datos_url: str = "postgresql://clinica:clinica@localhost:5433/clinica_san_rafael"
     clave_secreta_jwt: str = "cambiar-por-un-valor-largo-y-aleatorio"
     expiracion_token_minutos: int = 60
     autenticacion_simulada: bool = False
