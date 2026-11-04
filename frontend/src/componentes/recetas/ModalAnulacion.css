@@ -1,0 +1,6 @@
+.hu10-modal { max-width: 32rem; width: calc(100% - 3rem); border: 1px solid #cbd5e1; border-radius: .75rem; padding: 1.5rem; }
+.hu10-modal::backdrop { background: rgb(15 23 42 / 50%); }
+.hu10-modal fieldset { border: 0; margin: 1rem 0; padding: 0; display: grid; gap: .75rem; }
+.hu10-modal textarea { min-height: 6rem; width: 100%; box-sizing: border-box; }
+.hu10-modal button { padding: .6rem 1rem; cursor: pointer; }
+.hu10-modal button:disabled { cursor: default; }
