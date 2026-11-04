@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from psycopg import Connection
 
 from aplicacion.m1_hce import repositorio_publico
+from aplicacion.nucleo.errores import ErrorNegocio
 
 
 class PacienteSalida(BaseModel):
@@ -29,3 +30,23 @@ def obtener_paciente(conexion: Connection, id_paciente: int) -> PacienteSalida |
     """Devuelve el paciente o None si no existe."""
     fila = repositorio_publico.buscar_paciente(conexion, id_paciente)
     return PacienteSalida.model_validate(fila) if fila is not None else None
+
+
+class ContextoConsulta(BaseModel):
+    """Solo identidad y estado necesarios para registrar HU04, sin informacion clinica."""
+    id_consulta: int
+    id_paciente: int
+    id_medico: int
+    anulada: bool
+
+
+def obtener_contexto_consulta(conexion: Connection, id_consulta: int) -> ContextoConsulta | None:
+    """Ampliacion minima C3 para C5: bloquea la consulta en la misma transaccion.
+
+    No confirma ni abre conexiones. El consumidor verifica permisos/estado antes
+    de escribir y mantiene el bloqueo hasta commit/rollback de su operacion.
+    """
+    if conexion.autocommit is True:
+        raise ErrorNegocio("DATOS_INVALIDOS", "Se requiere una conexión transaccional.", 422)
+    fila = repositorio_publico.buscar_contexto_consulta(conexion, id_consulta)
+    return ContextoConsulta.model_validate(fila) if fila is not None else None
