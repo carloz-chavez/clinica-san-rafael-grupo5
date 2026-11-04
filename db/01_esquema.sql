@@ -652,7 +652,7 @@ CREATE TABLE bitacora_auditoria (
     id_paciente INTEGER,
     accion VARCHAR(30) NOT NULL,
     entidad VARCHAR(100) NOT NULL,
-    id_registro INTEGER NOT NULL,
+    id_registro INTEGER,
     fecha_evento TIMESTAMP NOT NULL
         DEFAULT CURRENT_TIMESTAMP,
     detalle TEXT,
@@ -668,10 +668,10 @@ CREATE TABLE bitacora_auditoria (
     CONSTRAINT chk_auditoria_accion
         CHECK (
             accion IN (
-                'CREAR',
-                'ACTUALIZAR',
-                'CONSULTAR',
-                'ANULAR'
+                'CREACION',
+                'MODIFICACION',
+                'CONSULTA',
+                'ANULACION'
             )
         ),
 
@@ -679,7 +679,7 @@ CREATE TABLE bitacora_auditoria (
         CHECK (LENGTH(TRIM(entidad)) > 0),
 
     CONSTRAINT chk_auditoria_id_registro
-        CHECK (id_registro > 0)
+        CHECK (id_registro IS NULL OR id_registro > 0)
 );
 
 -- Proteger registros contra UPDATE y DELETE.
