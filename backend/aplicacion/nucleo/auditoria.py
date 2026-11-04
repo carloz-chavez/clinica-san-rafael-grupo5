@@ -1,4 +1,4 @@
-"""CONTRATO de la bitacora de auditoria (RNF02 y RNF04).
+"""CONTRATO e implementacion de la bitacora de auditoria (RNF02 y RNF04).
 
 Toda consulta o modificacion de informacion clinica debe llamar a
 registrar_bitacora DENTRO DE LA MISMA TRANSACCION de la operacion:
@@ -12,8 +12,6 @@ registrar_bitacora DENTRO DE LA MISMA TRANSACCION de la operacion:
 Reglas del esquema (bitacora_auditoria):
   - Inmutable: un trigger impide UPDATE y DELETE.
   - Registra usuario, paciente (si aplica), accion, entidad e id_registro.
-
-Responsable de la implementacion: Carlos (tarea C3).
 """
 
 
@@ -28,8 +26,17 @@ def registrar_bitacora(
     *,
     id_consulta: int | None = None,
 ) -> None:
-    """Inserta una fila en bitacora_auditoria usando la conexion recibida.
+    """Inserta una fila en bitacora_auditoria usando la conexion recibida."""
+    registro_id = id_registro if id_registro is not None else id_consulta
+    if conexion is None:
+        return
 
-    Acepta id_registro o id_consulta por compatibilidad entre contratos.
-    """
-    raise NotImplementedError("Pendiente: Carlos (tarea C3)")
+    with conexion.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO bitacora_auditoria (
+                id_usuario, id_paciente, accion, entidad, id_registro, detalle
+            ) VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (id_usuario, id_paciente, accion, entidad, registro_id, detalle),
+        )
