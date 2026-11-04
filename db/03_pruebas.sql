@@ -72,3 +72,31 @@ ROLLBACK;
     DO $$ BEGIN RAISE EXCEPTION 'La suite contiene pruebas fallidas'; END $$;
 \endif
 \echo 'OK: pruebas aprobadas; datos revertidos (identity de auditoria puede avanzar)'
+
+-- C2 es optativo para conservar las 36 pruebas originales de C1 sin seed.
+\if :{?probar_seed}
+BEGIN;
+CREATE FUNCTION pg_temp.verificar_c2(nombre text, cumple boolean) RETURNS void
+LANGUAGE plpgsql AS $$ BEGIN
+ IF cumple IS DISTINCT FROM true THEN RAISE EXCEPTION 'Fallo C2: %',nombre; END IF;
+ RAISE NOTICE 'OK C2: %',nombre;
+END $$;
+SELECT pg_temp.verificar_c2('4 especialidades',(SELECT count(*)=4 FROM especialidades WHERE id_especialidad BETWEEN 800001 AND 800099));
+SELECT pg_temp.verificar_c2('5 medicos activos y especialidades correctas',(SELECT count(*)=5 AND bool_and(m.activo AND e.id_especialidad IS NOT NULL) FROM medicos m LEFT JOIN especialidades e USING(id_especialidad) WHERE m.id_medico BETWEEN 800001 AND 800099));
+SELECT pg_temp.verificar_c2('4 usuarios con roles y medicos esperados',(SELECT array_agg(rol ORDER BY id_usuario)=ARRAY['ADMISION','MEDICO','MEDICO','ADMINISTRADOR']::varchar[] AND bool_and(activo AND CASE WHEN rol='MEDICO' THEN id_medico=id_usuario-1 ELSE id_medico IS NULL END) FROM usuarios WHERE id_usuario BETWEEN 800001 AND 800099));
+SELECT pg_temp.verificar_c2('hashes Argon2id',(SELECT count(*)=4 AND bool_and(contrasena_hash LIKE '$argon2id$v=19$%') FROM usuarios WHERE id_usuario BETWEEN 800001 AND 800099));
+SELECT pg_temp.verificar_c2('8 pacientes ficticios',(SELECT count(*)=8 AND count(DISTINCT dni)=8 AND bool_and(correo LIKE '%@example.invalid' AND activo) FROM pacientes WHERE id_paciente BETWEEN 800001 AND 800099));
+SELECT pg_temp.verificar_c2('25 horarios validos',(SELECT count(*)=25 AND bool_and(activo AND dia_semana BETWEEN 1 AND 5 AND hora_inicio='08:00' AND hora_fin='12:00') FROM horarios_medicos WHERE id_horario BETWEEN 800001 AND 800099));
+SELECT pg_temp.verificar_c2('sin horarios superpuestos',NOT EXISTS(SELECT FROM horarios_medicos a JOIN horarios_medicos b ON a.id_medico=b.id_medico AND a.dia_semana=b.dia_semana AND a.id_horario<b.id_horario AND a.hora_inicio<b.hora_fin AND b.hora_inicio<a.hora_fin WHERE a.activo AND b.activo AND a.id_horario BETWEEN 800001 AND 800099));
+SELECT pg_temp.verificar_c2('10 citas y cuatro estados',(SELECT count(*)=10 AND array_agg(DISTINCT estado ORDER BY estado)=ARRAY['atendida','cancelada','confirmada','registrada']::varchar[] FROM citas WHERE id_cita BETWEEN 800001 AND 800099));
+SELECT pg_temp.verificar_c2('citas de 30 minutos cubiertas',NOT EXISTS(SELECT FROM citas c WHERE c.id_cita BETWEEN 800001 AND 800099 AND NOT EXISTS(SELECT FROM horarios_medicos h WHERE h.id_medico=c.id_medico AND h.activo AND h.dia_semana=extract(isodow FROM c.fecha) AND c.hora>=h.hora_inicio AND extract(epoch FROM c.hora)+1800<=extract(epoch FROM h.hora_fin))));
+SELECT pg_temp.verificar_c2('sin reservas simultaneas',NOT EXISTS(SELECT FROM citas a JOIN citas b ON a.id_cita<b.id_cita AND a.fecha=b.fecha AND a.hora=b.hora AND (a.id_medico=b.id_medico OR a.id_paciente=b.id_paciente) WHERE a.estado<>'cancelada' AND b.estado<>'cancelada' AND a.id_cita BETWEEN 800001 AND 800099));
+SELECT pg_temp.verificar_c2('6 consultas, una anulada y cronologia correcta',(SELECT count(*)=6 AND count(*) FILTER(WHERE q.anulada)=1 AND bool_and(c.id_cita IS NOT NULL AND q.id_paciente=c.id_paciente AND q.id_medico=c.id_medico AND q.fecha_hora=c.fecha+c.hora AND c.estado='atendida') FROM consultas_medicas q LEFT JOIN citas c USING(id_cita) WHERE q.id_consulta BETWEEN 800001 AND 800099));
+SELECT pg_temp.verificar_c2('6 recetas asociadas',(SELECT count(*)=6 AND bool_and(q.id_consulta IS NOT NULL AND r.fecha_registro>=q.fecha_hora) FROM recetas r LEFT JOIN consultas_medicas q USING(id_consulta) WHERE r.id_receta BETWEEN 800001 AND 800099));
+SELECT pg_temp.verificar_c2('6 indicaciones asociadas',(SELECT count(*)=6 AND bool_and(q.id_consulta IS NOT NULL AND i.fecha_registro>=q.fecha_hora) FROM indicaciones_medicas i LEFT JOIN consultas_medicas q USING(id_consulta) WHERE i.id_indicacion BETWEEN 800001 AND 800099));
+SELECT pg_temp.verificar_c2('8 eventos, cuatro acciones y registro NULL',(SELECT count(*)=8 AND count(*) FILTER(WHERE id_registro IS NULL)=2 AND array_agg(DISTINCT accion ORDER BY accion)=ARRAY['ANULACION','CONSULTA','CREACION','MODIFICACION']::varchar[] FROM bitacora_auditoria WHERE id_auditoria BETWEEN 800001 AND 800099));
+SELECT pg_temp.verificar_c2('sin huerfanos de usuarios/pacientes en auditoria',NOT EXISTS(SELECT FROM bitacora_auditoria b LEFT JOIN usuarios u USING(id_usuario) LEFT JOIN pacientes p USING(id_paciente) WHERE b.id_auditoria BETWEEN 800001 AND 800099 AND (u.id_usuario IS NULL OR (b.id_paciente IS NOT NULL AND p.id_paciente IS NULL))));
+SELECT pg_temp.verificar_c2('restricciones C1 validadas',NOT EXISTS(SELECT FROM pg_constraint WHERE connamespace='public'::regnamespace AND NOT convalidated));
+ROLLBACK;
+\echo 'OK: 16 comprobaciones C2 aprobadas'
+\endif
