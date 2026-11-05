@@ -453,6 +453,7 @@ GET  <span class="g">/pacientes/{id}/historia</span>     → HCE unificada</div>
             <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span>Cada atención integra <b>recetas, indicaciones y datos del médico</b>: nombre, colegiatura y especialidad.</span></li>
             <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span>Las <b>consultas anuladas aparecen marcadas</b> con su motivo: la historia nunca pierde registros (RNF04).</span></li>
             <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span>Cada acceso a la historia se <b>audita</b>; solo MEDICO, 403 a los demás roles.</span></li>
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>Pantalla «Historia clínica» integrada:</b> búsqueda por DNI, línea de tiempo y accesos a recetas y anulación.</span></li>
           </ul>
         </div>
       </div>
@@ -510,7 +511,7 @@ GET  <span class="g">/pacientes/{id}/historia</span>     → HCE unificada</div>
         <div class="tarjeta">
           <div class="rol"><div class="icono verde"><svg viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><line x1="8" y1="10" x2="14.5" y2="16.5"/></svg></div>
           <div><h4 style="font-size:16px">Recetas e indicaciones · HU04</h4>
-          <p style="color:var(--muted);margin-bottom:12px">Componente construido para la consulta médica.</p></div></div>
+          <p style="color:var(--muted);margin-bottom:12px">Integrado en la pantalla «Historia clínica» del médico.</p></div></div>
           <ul class="lista" style="font-size:13.5px">
             <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span>Filas dinámicas: <b>medicamento, dosis, frecuencia y duración</b>, más indicaciones libres.</span></li>
             <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span>Solo el <b>médico responsable</b> de la consulta puede registrarlas (403 si no).</span></li>
@@ -648,8 +649,8 @@ GET  <span class="g">/pacientes/{id}/historia</span>     → HCE unificada</div>
         <div>
           <div class="col-titulo">Lo que sigue</div>
           <div class="rejilla" style="gap:10px">
-            <div class="tarjeta rol"><div class="icono"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
-              <div><h4>Pantalla del médico (frontend)</h4><p>Conectar «Historia clínica» con el registro de atención y la línea de tiempo (HU02/HU03), más los componentes de recetas (HU04) y anulación (HU10), ya construidos y probados.</p></div></div>
+            <div class="tarjeta rol"><div class="icono"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+              <div><h4>Login real con datos demo C2</h4><p>Para demostrar el flujo completo del médico con inicio de sesión: cargar <span class="mono">db/02_seed.sql</span> con la contraseña que elija el equipo (sin hash en el repositorio).</p></div></div>
             <div class="tarjeta rol"><div class="icono ambar"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
               <div><h4>Sprint 2 · Should</h4><p>HU11 · Confirmar o cancelar citas (3 pts) y HU05 · Recordatorios automáticos (5 pts), según el backlog priorizado.</p></div></div>
           </div>
