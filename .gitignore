@@ -152,6 +152,11 @@ activemq-data/
 # SageMath parsed files
 *.sage.py
 
+# Frontend
+node_modules/
+frontend/dist/
+frontend/.env.local
+
 # Environments
 .env
 .envrc
