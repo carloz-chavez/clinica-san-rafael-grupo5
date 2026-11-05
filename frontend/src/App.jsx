@@ -28,8 +28,8 @@ function PaginaAgenda() {
 }
 
 function PaginaHistoria() {
-  const { usuario } = useSesion();
-  return <HistoriaClinica usuario={usuario} />;
+  const { usuario, token } = useSesion();
+  return <HistoriaClinica usuario={usuario} token={token} baseUrl={BASE_URL_API} />;
 }
 
 export default function App() {
