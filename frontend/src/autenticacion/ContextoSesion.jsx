@@ -3,6 +3,7 @@ import { crearClienteAutenticacion } from '../api/autenticacion';
 import { normalizarSesion } from '../utilidades/sesion';
 
 const CLAVE_SESION = 'sanrafael.sesion';
+const ID_MEDICO_SIMULADO = 1;
 const ContextoSesion = createContext(null);
 
 function leerSesionGuardada() {
@@ -46,7 +47,7 @@ export function ProveedorSesion({ children, baseUrl = '', solicitar = fetch }) {
         id_usuario: 0,
         correo: `simulado.${String(rol).toLowerCase()}@sanrafael.local`,
         rol,
-        id_medico: null,
+        id_medico: rol === 'MEDICO' ? ID_MEDICO_SIMULADO : null,
       },
     };
     guardarSesion(nueva);
