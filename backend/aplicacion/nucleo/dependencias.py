@@ -16,10 +16,13 @@ import jwt
 from pydantic import BaseModel
 
 from aplicacion.nucleo.configuracion import obtener_configuracion
-from aplicacion.nucleo.constantes import ROLES_VALIDOS
+from aplicacion.nucleo.constantes import ROL_MEDICO, ROLES_VALIDOS
 from aplicacion.nucleo.errores import ErrorNegocio
 
 _esquema_token = HTTPBearer(auto_error=False)
+
+# Solo desarrollo: el medico ficticio que acompana al usuario simulado (ver db del modo simulado).
+ID_MEDICO_SIMULADO = 1
 
 
 class UsuarioActual(BaseModel):
@@ -41,10 +44,12 @@ def obtener_usuario_actual(
 
     if credenciales is None:
         if configuracion.autenticacion_simulada:
+            rol_simulado = configuracion.rol_simulado.upper()
             return UsuarioActual(
                 id_usuario=1,
                 correo="simulado@sanrafael.test",
-                rol=configuracion.rol_simulado.upper(),
+                rol=rol_simulado,
+                id_medico=ID_MEDICO_SIMULADO if rol_simulado == ROL_MEDICO else None,
             )
         raise ErrorNegocio("NO_AUTENTICADO", "Se requiere iniciar sesion.", 401)
 
