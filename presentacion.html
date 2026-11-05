@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Sistema de Gestión Clínica San Rafael — Grupo 5 · SW705</title>
+<style>
+  :root{
+    --bg:#f4f9fa;
+    --ink:#0b2431;
+    --muted:#5b7480;
+    --teal:#0e7490;
+    --teal-dark:#155e75;
+    --teal-soft:#e3f3f8;
+    --green:#10b981;
+    --green-dark:#047857;
+    --green-soft:#dcf5ec;
+    --amber:#b45309;
+    --amber-soft:#fdf1e0;
+    --red:#e11d48;
+    --red-soft:#fde8ed;
+    --card:#ffffff;
+    --line:#d8e9ee;
+    --shadow:0 12px 32px rgba(11,36,49,.09);
+    --radius:18px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  .progreso{position:fixed;top:0;left:0;right:0;height:4px;background:#e2eef2;z-index:50}
+  .progreso>div{height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--green));transition:width .4s ease}
+  main{position:fixed;inset:0}
+  .slide{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;justify-content:center;
+    padding:54px 76px 84px;
+    opacity:0;visibility:hidden;pointer-events:none;
+    transform:translateY(16px);
+    transition:opacity .45s ease,transform .45s ease,visibility .45s;
+    overflow:auto;
+  }
+  .slide.activa{opacity:1;visibility:visible;pointer-events:auto;transform:none}
+  .cabecera{margin-bottom:26px}
+  .kicker{
+    display:inline-flex;align-items:center;gap:10px;
+    font-size:12.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--teal);
+  }
+  .kicker::before{content:"";width:26px;height:3px;border-radius:2px;background:linear-gradient(90deg,var(--teal),var(--green))}
+  .cabecera h2{font-size:clamp(26px,3.4vw,40px);font-weight:800;letter-spacing:-.02em;margin-top:10px;line-height:1.12}
+  .lead{color:var(--muted);font-size:clamp(14px,1.35vw,17px);margin-top:10px;max-width:900px;line-height:1.55}
+  .cuerpo{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0}
+  .pie-lamina{margin-top:22px;color:var(--muted);font-size:13px;display:flex;align-items:center;gap:8px}
+
+  .tarjeta{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px}
+  .rejilla{display:grid;gap:16px}
+  .rejilla.c2{grid-template-columns:repeat(2,1fr)}
+  .rejilla.c3{grid-template-columns:repeat(3,1fr)}
+  .rejilla.c4{grid-template-columns:repeat(4,1fr)}
+
+  .icono{
+    width:42px;height:42px;border-radius:12px;flex:none;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--teal-soft);color:var(--teal-dark);
+  }
+  .icono.verde{background:var(--green-soft);color:var(--green-dark)}
+  .icono.ambar{background:var(--amber-soft);color:var(--amber)}
+  .icono.rojo{background:var(--red-soft);color:var(--red)}
+  .icono svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+  .stat .num{font-size:clamp(30px,3.4vw,44px);font-weight:800;letter-spacing:-.02em;background:linear-gradient(120deg,var(--teal-dark),var(--green-dark));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .stat .txt{color:var(--muted);font-size:14px;line-height:1.45;margin-top:6px}
+
+  .chip{
+    display:inline-flex;align-items:center;gap:7px;
+    background:var(--teal-soft);color:var(--teal-dark);
+    border:1px solid #c7e4ee;border-radius:999px;
+    padding:6px 14px;font-size:13px;font-weight:600;
+  }
+  .chip.verde{background:var(--green-soft);color:var(--green-dark);border-color:#bfe9d9}
+  .chip.gris{background:#eef3f5;color:var(--muted);border-color:var(--line)}
+  .chip.rojo{background:var(--red-soft);color:var(--red);border-color:#f7cdd8}
+  .chips{display:flex;flex-wrap:wrap;gap:9px}
+
+  .lista{list-style:none;display:flex;flex-direction:column;gap:12px}
+  .lista li{display:flex;gap:12px;align-items:flex-start;font-size:14.5px;line-height:1.5}
+  .lista li svg{width:19px;height:19px;flex:none;margin-top:2px;stroke:var(--green-dark);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+  .lista b{color:var(--ink)}
+  .lista .cod{font-family:Consolas,"Cascadia Mono",monospace;font-size:.86em;background:var(--teal-soft);color:var(--teal-dark);border-radius:6px;padding:1px 6px}
+
+  .paso{display:flex;gap:14px;align-items:flex-start}
+  .paso .n{
+    width:30px;height:30px;border-radius:50%;flex:none;
+    background:linear-gradient(135deg,var(--teal),var(--green));color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;
+  }
+  .pasos{display:flex;flex-direction:column;gap:14px}
+  .pasos .paso .txt{font-size:14.5px;line-height:1.5}
+  .pasos .txt .cod, .mono{font-family:Consolas,"Cascadia Mono",monospace}
+
+  .codigo{
+    font-family:Consolas,"Cascadia Mono",monospace;
+    background:#0b2431;color:#d8f0f7;border-radius:12px;
+    padding:12px 16px;font-size:13.5px;line-height:1.6;
+  }
+  .codigo .g{color:#7ce7bd}
+
+  table.tabla{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--card);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);border:1px solid var(--line)}
+  table.tabla th{background:var(--teal-dark);color:#fff;text-align:left;padding:10px 14px;font-weight:600;font-size:12.5px;letter-spacing:.03em}
+  table.tabla td{padding:10px 14px;border-top:1px solid var(--line);color:#25434f;vertical-align:top;line-height:1.45}
+  table.tabla tr:first-child td{border-top:none}
+
+  .mini-grilla{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .turno{
+    border-radius:10px;padding:9px 6px;text-align:center;
+    font-size:12.5px;font-weight:700;border:1.5px solid #bfe0ea;color:var(--teal-dark);background:#f2fafc;
+  }
+  .turno.ocupado{border-color:#e5c4cc;color:#a45b6e;background:repeating-linear-gradient(45deg,#fdf4f6,#fdf4f6 6px,#fbe9ee 6px,#fbe9ee 12px);text-decoration:line-through;font-weight:600}
+
+  .rol{display:flex;gap:14px;align-items:flex-start}
+  .rol h4{font-size:15.5px;margin-bottom:3px}
+  .rol p{color:var(--muted);font-size:13.5px;line-height:1.45}
+
+  .destacado{
+    border-left:4px solid var(--green);
+    background:linear-gradient(90deg,var(--green-soft),#ffffff 70%);
+    border-radius:0 14px 14px 0;padding:14px 18px;font-size:14.5px;line-height:1.55;
+  }
+  .destacado.teal{border-left-color:var(--teal);background:linear-gradient(90deg,var(--teal-soft),#ffffff 70%)}
+
+  .barra-avance{height:14px;border-radius:999px;background:#e2eef2;overflow:hidden}
+  .barra-avance>div{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--teal),var(--green));transition:width .6s}
+
+  .hu{display:flex;align-items:center;gap:10px;font-size:14px}
+  .hu .estado{width:22px;height:22px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center}
+  .hu .estado.ok{background:var(--green-soft);color:var(--green-dark)}
+  .hu .estado.ok svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+  .hu .estado.pend{background:var(--amber-soft);color:var(--amber)}
+
+  .controles{
+    position:fixed;left:0;right:0;bottom:0;z-index:60;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 28px;
+    background:linear-gradient(180deg,rgba(244,249,250,0),var(--bg) 55%);
+    pointer-events:none;
+  }
+  .controles>*{pointer-events:auto}
+  .marca{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.02em}
+  .nav{display:flex;align-items:center;gap:12px}
+  .nav button{
+    width:38px;height:38px;border-radius:50%;border:1px solid var(--line);
+    background:#fff;color:var(--teal-dark);cursor:pointer;font-size:16px;line-height:1;
+    box-shadow:0 4px 12px rgba(11,36,49,.08);transition:transform .15s,background .15s;
+  }
+  .nav button:hover{transform:translateY(-2px);background:var(--teal-soft)}
+  #contador{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:56px;text-align:center}
+  .puntos{display:flex;gap:7px}
+  .puntos button{width:9px;height:9px;border-radius:50%;border:none;background:#c3dbe3;cursor:pointer;transition:.2s;padding:0}
+  .puntos button.activo{background:var(--teal);transform:scale(1.25)}
+
+  .portada{align-items:center;text-align:center;justify-content:center}
+  .portada .blobs{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+  .portada .blobs::before,.portada .blobs::after{
+    content:"";position:absolute;border-radius:50%;filter:blur(70px);opacity:.5;
+  }
+  .portada .blobs::before{width:520px;height:520px;background:#bfe7f2;top:-180px;left:-140px}
+  .portada .blobs::after{width:460px;height:460px;background:#c8f0e0;bottom:-180px;right:-120px}
+  .portada .contenido{position:relative;max-width:980px;display:flex;flex-direction:column;align-items:center}
+  .ecg{margin:26px 0 22px;width:min(420px,70%)}
+  .ecg path{stroke:url(#gradEcg);stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .titulo-grande{
+    font-size:clamp(34px,4.6vw,58px);font-weight:800;letter-spacing:-.025em;line-height:1.08;
+    background:linear-gradient(115deg,var(--teal-dark) 20%,var(--green-dark));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .subtitulo{margin-top:16px;color:var(--muted);font-size:clamp(15px,1.5vw,18px);line-height:1.55;max-width:760px}
+  .equipo{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:30px}
+  .miembro{
+    background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);
+    padding:12px 20px;text-align:left;
+  }
+  .miembro .nombre{font-weight:700;font-size:14.5px}
+  .miembro .cargo{font-size:12px;color:var(--teal);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+  .ayuda{margin-top:26px;color:var(--muted);font-size:12.5px;display:flex;gap:8px;align-items:center}
+  .tecla{border:1px solid var(--line);background:#fff;border-radius:6px;padding:2px 8px;font-size:11.5px;font-weight:700;color:var(--teal-dark);box-shadow:0 2px 0 var(--line)}
+
+  .dos-col{display:grid;grid-template-columns:1.05fr .95fr;gap:26px;align-items:start}
+  .col-titulo{font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin-bottom:12px}
+
+  @media (max-width:900px){
+    .slide{padding:40px 28px 92px}
+    .rejilla.c3,.rejilla.c4,.dos-col{grid-template-columns:1fr}
+    .rejilla.c2{grid-template-columns:1fr}
+    .puntos{display:none}
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="gradEcg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0e7490"/>
+      <stop offset="1" stop-color="#10b981"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div class="progreso"><div id="barra"></div></div>
+
+<main id="deck">
+
+  <section class="slide portada activa">
+    <div class="blobs"></div>
+    <div class="contenido">
+      <div class="chips" style="justify-content:center">
+        <span class="chip">UNI · FIIS · Escuela de Ingeniería de Software</span>
+        <span class="chip verde">SW705 · Taller de Ingeniería de Software I</span>
+      </div>
+      <h1 class="titulo-grande" style="margin-top:22px">Sistema de Gestión Clínica<br>San Rafael</h1>
+      <p class="subtitulo">Historia clínica electrónica (M1) y agenda de citas médicas (M2) para la Clínica San Rafael S.A.C. — Proyecto integrador · Sprint 1 · 44 puntos</p>
+      <svg class="ecg" viewBox="0 0 420 60">
+        <path d="M0 32 H120 l12-10 10 20 12-32 14 44 10-22 h18 l8-8 8 8 H420"/>
+      </svg>
+      <div class="equipo">
+        <div class="miembro"><div class="nombre">Gonzalo Albornoz Azurza</div><div class="cargo">Product Owner</div></div>
+        <div class="miembro"><div class="nombre">Carlos Chavez Oliva</div><div class="cargo">Scrum Master</div></div>
+        <div class="miembro"><div class="nombre">Ángel Vargas Ponce</div><div class="cargo">Developer</div></div>
+      </div>
+      <div class="ayuda"><span class="tecla">←</span><span class="tecla">→</span> para navegar la presentación</div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="cabecera">
+      <span class="kicker">Contexto · Caso empresarial</span>
+      <h2>Una clínica que crece con procesos en papel</h2>
+      <p class="lead">Clínica privada en San Borja (Lima) con consulta ambulatoria multiespecialidad, laboratorio, farmacia y emergencia. Hoy su gestión depende de papel, hojas de Excel por especialidad y una agenda telefónica saturada.</p>
+    </div>
+    <div class="cuerpo">
+      <div class="rejilla c4">
+        <div class="tarjeta stat">
+          <div class="num">18 %</div>
+          <div class="txt">de inasistencia a citas agendadas por teléfono</div>
+        </div>
+        <div class="tarjeta stat">
+          <div class="num">20 min</div>
+          <div class="txt">demora hasta agendar una sola cita por llamada</div>
+        </div>
+        <div class="tarjeta stat">
+          <div class="num">48 h</div>
+          <div class="txt">de demora en resultados de laboratorio en papel</div>
+        </div>
+        <div class="tarjeta stat">
+          <div class="num">5 EPS</div>
+          <div class="txt">con reconciliación manual de convenios y aseguradoras</div>
+        </div>
+      </div>
+      <div class="destacado" style="margin-top:20px">
+        Consecuencia directa: <b>citas duplicadas o mal asignadas</b> y médicos que atienden <b>sin acceso a los antecedentes previos</b> del paciente.
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="cabecera">
+      <span class="kicker">Visión del producto</span>
+      <h2>Una sola aplicación para la historia y la agenda</h2>
+    </div>
+    <div class="cuerpo">
+      <div class="destacado teal">
+        «Para el personal de Admisión y los médicos que necesitan agendar citas sin conflictos y consultar antecedentes en el momento de la atención, el sistema <b>unifica la historia clínica</b> de cada paciente, <b>muestra la disponibilidad en una sola vista</b> y <b>evita que un mismo horario se asigne dos veces</b>; a diferencia del proceso actual basado en llamadas, papel y Excel.»
+      </div>
+      <div class="rejilla c2" style="margin-top:18px">
+        <div class="tarjeta">
+          <div class="rol"><div class="icono"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div><h4>Objetivo 1 · Rendimiento</h4><p>Apertura de la historia clínica en <b>menos de 2 segundos</b> con hasta 8 000 pacientes registrados.</p></div></div>
+        </div>
+        <div class="tarjeta">
+          <div class="rol"><div class="icono verde"><svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+          <div><h4>Objetivo 2 · Inasistencia</h4><p>Reducir la inasistencia del <b>18 % a menos del 10 %</b> con recordatorios automáticos al terminar el primer mes de implantación.</p></div></div>
+        </div>
+      </div>
+      <div style="margin-top:20px">
+        <div class="col-titulo">Hoja de ruta por módulos</div>
+        <div class="chips">
+          <span class="chip verde">M1 · Historia clínica — Sprint 1 ✓</span>
+          <span class="chip verde">M2 · Agenda y citas — Sprint 1 ✓</span>
+          <span class="chip gris">M3 · Laboratorio e imágenes</span>
+          <span class="chip gris">M4 · Facturación y convenios</span>
+          <span class="chip gris">M5 · Reportes gerenciales</span>
+          <span class="chip gris">M6 · Portal del paciente / telemedicina</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="cabecera">
+      <span class="kicker">Especificación de requerimientos</span>
+      <h2>Requerimientos contemplados en este sprint</h2>
+      <p class="lead">Nueve requerimientos <b>Must</b> forman el MVP de los módulos M1 y M2 (44 puntos); los dos <b>Should</b> restantes pasan al Sprint 2.</p>
+    </div>
+    <div class="cuerpo">
+      <table class="tabla" style="font-size:13px">
+        <tr><th style="width:64px">ID</th><th>Requerimiento funcional</th><th style="width:92px">Módulo</th><th style="width:120px">Prioridad</th></tr>
+        <tr><td><b>RF01</b></td><td>Registrar y actualizar los datos de un paciente, evitando duplicados por documento de identidad.</td><td>M1 · HCE</td><td><span class="chip verde" style="padding:2px 10px;font-size:11.5px">Must</span></td></tr>
+        <tr><td><b>RF02</b></td><td>Permitir al médico registrar una consulta clínica del paciente.</td><td>M1 · HCE</td><td><span class="chip verde" style="padding:2px 10px;font-size:11.5px">Must</span></td></tr>
+        <tr><td><b>RF03</b></td><td>Consultar la historia clínica unificada del paciente en orden cronológico.</td><td>M1 · HCE</td><td><span class="chip verde" style="padding:2px 10px;font-size:11.5px">Must</span></td></tr>
+        <tr><td><b>RF04</b></td><td>Registrar indicaciones y recetas asociadas a una consulta.</td><td>M1 · HCE</td><td><span class="chip verde" style="padding:2px 10px;font-size:11.5px">Must</span></td></tr>
+        <tr><td><b>RF06</b></td><td>Consultar la disponibilidad de horarios por especialidad, médico y fecha.</td><td>M2 · Agenda</td><td><span class="chip verde" style="padding:2px 10px;font-size:11.5px">Must</span></td></tr>
+        <tr><td><b>RF07</b></td><td>Registrar una cita indicando paciente, médico, fecha, hora y motivo.</td><td>M2 · Agenda</td><td><span class="chip verde" style="padding:2px 10px;font-size:11.5px">Must</span></td></tr>
+        <tr><td><b>RF08</b></td><td>Impedir asignar dos citas al mismo médico en la misma fecha y hora.</td><td>M2 · Agenda</td><td><span class="chip verde" style="padding:2px 10px;font-size:11.5px">Must</span></td></tr>
+        <tr><td><b>RF09</b></td><td>Autenticar usuarios y autorizar el acceso por rol (Médico, Admisión, Administrador).</td><td>M1 / M2</td><td><span class="chip verde" style="padding:2px 10px;font-size:11.5px">Must</span></td></tr>
+        <tr><td><b>RF10</b></td><td>Anular una consulta conservando la entrada original y registrando usuario, fecha, hora y motivo.</td><td>M1 · HCE</td><td><span class="chip verde" style="padding:2px 10px;font-size:11.5px">Must</span></td></tr>
+        <tr style="opacity:.55"><td><b>RF05</b></td><td>Automatizar el envío de notificaciones y recordatorios de citas.</td><td>M2 · Agenda</td><td><span class="chip" style="background:var(--amber-soft);color:var(--amber);border-color:#f0d8b4;padding:2px 10px;font-size:11.5px">Should · Sprint 2</span></td></tr>
+        <tr style="opacity:.55"><td><b>RF11</b></td><td>Confirmar o cancelar una cita registrada; al cancelarla, el horario vuelve a quedar disponible.</td><td>M2 · Agenda</td><td><span class="chip" style="background:var(--amber-soft);color:var(--amber);border-color:#f0d8b4;padding:2px 10px;font-size:11.5px">Should · Sprint 2</span></td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="cabecera">
+      <span class="kicker">Cómo está construido</span>
+      <h2>Monolito en capas con dos módulos de negocio</h2>
+    </div>
+    <div class="cuerpo">
+      <div class="chips" style="margin-bottom:18px">
+        <span class="chip">Python 3.11</span><span class="chip">FastAPI</span><span class="chip">PostgreSQL 16</span>
+        <span class="chip">React + Vite</span><span class="chip">Tailwind</span><span class="chip">JWT · Argon2id</span><span class="chip">Docker</span>
+      </div>
+      <div class="dos-col">
+        <div class="rejilla" style="gap:10px">
+          <div class="tarjeta" style="padding:14px 18px">
+            <b>Navegador</b> · <span style="color:var(--muted)">React SPA con sesión por rol, rutas protegidas y cliente de API con token Bearer</span>
+          </div>
+          <div style="text-align:center;color:var(--teal);font-size:18px;line-height:.6">↕</div>
+          <div class="tarjeta" style="padding:14px 18px">
+            <b>API FastAPI</b> · <span style="color:var(--muted)">capas <span class="mono">enrutador → servicio → repositorio</span></span>
+            <div class="chips" style="margin-top:8px">
+              <span class="chip verde">M1 · HCE: pacientes, consultas, recetas, autenticación</span>
+              <span class="chip verde">M2 · Agenda: disponibilidad, citas</span>
+              <span class="chip">núcleo: seguridad, errores, auditoría</span>
+            </div>
+          </div>
+          <div style="text-align:center;color:var(--teal);font-size:18px;line-height:.6">↕</div>
+          <div class="tarjeta" style="padding:14px 18px">
+            <b>PostgreSQL 16</b> · <span style="color:var(--muted)">9 tablas; la integridad vive en la BD: índices únicos parciales, triggers y advisory locks</span>
+          </div>
+        </div>
+        <div class="lista">
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>Monolito en capas</b> elegido frente a microservicios: equipo pequeño, un solo despliegue y costos acotados (SAD §5).</span></li>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>M2 nunca toca las tablas de M1</b>: solo usa su interfaz pública, y hay una prueba que lo verifica.</span></li>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>Errores unificados</b> <span class="cod">{detalle, codigo}</span> y auditoría escrita en la <b>misma transacción</b> de cada operación.</span></li>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="cabecera">
+      <span class="kicker">Funcionamiento actual · 1 de 5</span>
+      <h2>Inicio de sesión por roles · HU09</h2>
+    </div>
+    <div class="cuerpo">
+      <div class="dos-col">
+        <div>
+          <div class="col-titulo">Flujo de autenticación</div>
+          <div class="pasos">
+            <div class="paso"><div class="n">1</div><div class="txt">El usuario envía correo y contraseña a <span class="cod">POST /auth/login</span>.</div></div>
+            <div class="paso"><div class="n">2</div><div class="txt">El backend verifica el hash <b>Argon2id</b> de la contraseña.</div></div>
+            <div class="paso"><div class="n">3</div><div class="txt">Emite un <b>JWT</b> con <span class="cod">id_usuario</span>, <span class="cod">rol</span> e <span class="cod">id_medico</span>.</div></div>
+            <div class="paso"><div class="n">4</div><div class="txt">El frontend guarda la sesión y <b>redirige según el rol</b> a su pantalla inicial.</div></div>
+          </div>
+        </div>
+        <div>
+          <div class="col-titulo">Espacio de trabajo por rol</div>
+          <div class="rejilla" style="gap:12px">
+            <div class="tarjeta rol"><div class="icono"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+              <div><h4>ADMISION</h4><p>Gestión de pacientes y agenda de citas.</p></div></div>
+            <div class="tarjeta rol"><div class="icono verde"><svg viewBox="0 0 24 24"><path d="M4.8 2.3A6 6 0 0 0 2 8c0 4.5 6 9 10 12 4-3 10-7.5 10-12a6 6 0 0 0-2.8-5.7"/></svg></div>
+              <div><h4>MEDICO</h4><p>Historia clínica de sus pacientes con vínculo asistencial.</p></div></div>
+            <div class="tarjeta rol"><div class="icono"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+              <div><h4>ADMINISTRADOR</h4><p>Acceso completo al sistema.</p></div></div>
+          </div>
+          <div class="destacado" style="margin-top:14px;font-size:13.5px">
+            Credenciales inválidas → <b>401 genérico</b> sin revelar qué dato falló · rol no autorizado → <b>403</b>. Modo simulado solo para desarrollo.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="cabecera">
+      <span class="kicker">Funcionamiento actual · 2 de 5</span>
+      <h2>Registro y búsqueda de pacientes · HU01</h2>
+    </div>
+    <div class="cuerpo">
+      <div class="dos-col">
+        <div>
+          <div class="col-titulo">Pantalla «Gestión de pacientes»</div>
+          <div class="pasos">
+            <div class="paso"><div class="n">1</div><div class="txt">Búsqueda por <b>DNI de 8 dígitos</b>, con cancelación de solicitudes al teclear.</div></div>
+            <div class="paso"><div class="n">2</div><div class="txt">Si no existe, «Nuevo paciente» <b>pre-llena el DNI buscado</b> en el formulario.</div></div>
+            <div class="paso"><div class="n">3</div><div class="txt">Alta o actualización con <span class="cod">POST/PUT /pacientes</span> y <b>errores por campo</b>.</div></div>
+          </div>
+          <div class="codigo" style="margin-top:16px">GET  <span class="g">/pacientes?dni=12345678</span>   → datos del paciente
+POST <span class="g">/pacientes</span>                → registra (409 si duplica DNI)
+PUT  <span class="g">/pacientes/{id}</span>          → actualiza datos</div>
+        </div>
+        <div>
+          <div class="col-titulo">Reglas de negocio</div>
+          <ul class="lista">
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><span class="cod">409 DNI_DUPLICADO</span> evita pacientes repetidos (índice único en BD).</span></li>
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span>El <b>médico solo consulta pacientes con vínculo asistencial</b>; si no, responde 403.</span></li>
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span>Cada operación escribe en bitácora: <span class="cod">CREACION</span>, <span class="cod">MODIFICACION</span>, <span class="cod">CONSULTA</span>.</span></li>
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span>Admisión y Administrador editan; el médico ve la ficha en <b>solo lectura</b>.</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="cabecera">
+      <span class="kicker">Funcionamiento actual · 3 de 5</span>
+      <h2>Registro de atención e historia unificada · HU02 · HU03</h2>
+    </div>
+    <div class="cuerpo">
+      <div class="dos-col">
+        <div>
+          <div class="col-titulo">Atención con validación de citas (HU02)</div>
+          <div class="pasos" style="gap:11px">
+            <div class="paso"><div class="n">1</div><div class="txt">El médico registra la atención con <span class="cod">POST /consultas</span>: <b>diagnóstico CIE-10</b>, observaciones y, si viene de agenda, la cita asociada.</div></div>
+            <div class="paso"><div class="n">2</div><div class="txt">El servicio valida que la cita pertenezca a <b>ese paciente y ese médico</b>, y que no esté cancelada ni ya atendida.</div></div>
+            <div class="paso"><div class="n">3</div><div class="txt">La cita pasa a estado <b>atendida</b> y la consulta queda en bitácora, en la misma transacción.</div></div>
+          </div>
+          <div class="codigo" style="margin-top:16px">POST <span class="g">/consultas</span>                     → registra atencion (201)
+GET  <span class="g">/consultas/{id_consulta}</span>     → detalle de una consulta
+GET  <span class="g">/pacientes/{id}/historia</span>     → HCE unificada</div>
+        </div>
+        <div>
+          <div class="col-titulo">Historia clínica electrónica (HU03)</div>
+          <ul class="lista">
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span>Una sola vista <b>cronológica</b>: filiación del paciente y todas sus atenciones.</span></li>
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span>Cada atención integra <b>recetas, indicaciones y datos del médico</b>: nombre, colegiatura y especialidad.</span></li>
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span>Las <b>consultas anuladas aparecen marcadas</b> con su motivo: la historia nunca pierde registros (RNF04).</span></li>
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span>Cada acceso a la historia se <b>audita</b>; solo MEDICO, 403 a los demás roles.</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="cabecera">
+      <span class="kicker">Funcionamiento actual · 4 de 5</span>
+      <h2>Agenda: disponibilidad y reservas a prueba de choques · HU06 · HU07 · HU08</h2>
+    </div>
+    <div class="cuerpo">
+      <div class="dos-col">
+        <div>
+          <div class="col-titulo">Pantalla «Agenda de citas»</div>
+          <div class="pasos" style="gap:11px">
+            <div class="paso"><div class="n">1</div><div class="txt">Filtros por <b>especialidad, médico y fecha</b>; catálogos desde la API.</div></div>
+            <div class="paso"><div class="n">2</div><div class="txt">Grilla de <b>turnos de 30 minutos</b> marcados libre u ocupado.</div></div>
+            <div class="paso"><div class="n">3</div><div class="txt">Modal de reserva: <b>paciente por DNI + motivo</b> → <span class="cod">POST /citas</span>.</div></div>
+            <div class="paso"><div class="n">4</div><div class="txt">Tabla del día ordenada por hora y médico, con <b>estados</b> visibles.</div></div>
+          </div>
+          <div class="tarjeta" style="margin-top:14px">
+            <div class="mini-grilla">
+              <div class="turno ocupado">08:00</div><div class="turno">08:30</div><div class="turno ocupado">09:00</div><div class="turno ocupado">09:30</div>
+              <div class="turno">10:00</div><div class="turno">10:30</div><div class="turno ocupado">11:00</div><div class="turno">11:30</div>
+            </div>
+            <div style="display:flex;gap:16px;margin-top:10px;font-size:12px;color:var(--muted)">
+              <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#f2fafc;border:1.5px solid #bfe0ea;vertical-align:-1px"></span> libre</span>
+              <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#fbe9ee;border:1.5px solid #e5c4cc;vertical-align:-1px"></span> ocupado</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="col-titulo">Triple defensa contra la doble reserva</div>
+          <ul class="lista">
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>Índice único parcial:</b> un médico (y un paciente) no repite turno activo; las canceladas no ocupan.</span></li>
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>Trigger + advisory lock:</b> valida el horario del médico y serializa reservas concurrentes.</span></li>
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>Última barrera en la API:</b> <span class="cod">409 HORARIO_OCUPADO</span> y la grilla se refresca sola.</span></li>
+          </ul>
+          <div class="destacado" style="margin-top:14px;font-size:13.5px">
+            Estados: <b>registrada → confirmada → atendida</b> · <b>cancelada</b> libera el turno al instante.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="cabecera">
+      <span class="kicker">Funcionamiento actual · 5 de 5</span>
+      <h2>Recetas con indicaciones y anulación segura · HU04 · HU10</h2>
+    </div>
+    <div class="cuerpo">
+      <div class="rejilla c2">
+        <div class="tarjeta">
+          <div class="rol"><div class="icono verde"><svg viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><line x1="8" y1="10" x2="14.5" y2="16.5"/></svg></div>
+          <div><h4 style="font-size:16px">Recetas e indicaciones · HU04</h4>
+          <p style="color:var(--muted);margin-bottom:12px">Componente construido para la consulta médica.</p></div></div>
+          <ul class="lista" style="font-size:13.5px">
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span>Filas dinámicas: <b>medicamento, dosis, frecuencia y duración</b>, más indicaciones libres.</span></li>
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span>Solo el <b>médico responsable</b> de la consulta puede registrarlas (403 si no).</span></li>
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><span class="cod">POST /consultas/{id}/indicaciones</span> · audita cada receta e indicación.</span></li>
+          </ul>
+        </div>
+        <div class="tarjeta">
+          <div class="rol"><div class="icono rojo"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></div>
+          <div><h4 style="font-size:16px">Anulación de consultas · HU10</h4>
+          <p style="color:var(--muted);margin-bottom:12px">Corregir la historia sin borrar nada (RNF04).</p></div></div>
+          <ul class="lista" style="font-size:13.5px">
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>Anulación lógica:</b> nunca se elimina; conserva el contenido original íntegro.</span></li>
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>Motivo obligatorio</b> + fecha, hora y usuario que anuló, en un modal de confirmación.</span></li>
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span>La consulta queda <b>congelada</b>: rechaza nuevas recetas con <span class="cod">409 CONSULTA_ANULADA</span>.</span></li>
+            <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><b>Bloqueo por fila</b> contra carreras concurrentes; probado con escenarios reales.</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="destacado teal" style="margin-top:18px">
+        Si la escritura de auditoría falla, <b>toda la operación revierte</b>: el registro clínico y su bitácora van siempre juntos.
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="cabecera">
+      <span class="kicker">RNF02 · RNF04 · Ley N.º 29733</span>
+      <h2>Cada acceso a la historia clínica queda registrado</h2>
+    </div>
+    <div class="cuerpo">
+      <div class="rejilla c2">
+        <div class="tarjeta rol"><div class="icono"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+          <div><h4>Bitácora inmutable a nivel de base de datos</h4><p>Triggers bloquean <span class="mono">UPDATE</span>, <span class="mono">DELETE</span> y <span class="mono">TRUNCATE</span> sobre <span class="mono">bitacora_auditoria</span>.</p></div></div>
+        <div class="tarjeta rol"><div class="icono"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+          <div><h4>Roles PostgreSQL de privilegio mínimo</h4><p>Un rol técnico solo puede <b>insertar</b> (writer) y otro solo <b>leer</b> (reader); sin SELECT para escribir.</p></div></div>
+        <div class="tarjeta rol"><div class="icono verde"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+          <div><h4>Auditoría atómica</h4><p>La bitácora se escribe en la <b>misma transacción</b> que la operación clínica: no hay registros huérfanos.</p></div></div>
+        <div class="tarjeta rol"><div class="icono verde"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+          <div><h4>Seguridad de credenciales y datos</h4><p>Contraseñas con <b>Argon2id</b>, sin claves ni hashes en el repositorio, y <b>datos 100 % ficticios</b> en pruebas y demos.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="cabecera">
+      <span class="kicker">Verificación</span>
+      <h2>Probado contra los RNF, historia por historia</h2>
+    </div>
+    <div class="cuerpo">
+      <table class="tabla">
+        <tr><th style="width:160px">RNF</th><th>Cómo lo soporta el sistema</th></tr>
+        <tr><td><b>Rendimiento</b></td><td>Índices (DNI, citas, bitácora), consultas específicas y paginación para abrir la HCE en &lt; 2 s con 8 000 pacientes.</td></tr>
+        <tr><td><b>Seguridad</b></td><td>Autenticación y roles en M1 reutilizados por M2; 403 a roles no autorizados y bitácora inmutable de cada transacción.</td></tr>
+        <tr><td><b>Disponibilidad</b></td><td>Despliegue como una sola unidad y respaldo diario; horario de atención de 7:00 a. m. a 9:00 p. m.</td></tr>
+        <tr><td><b>Trazabilidad</b></td><td>Nada se elimina físicamente: solo anulación lógica con motivo, usuario, fecha y hora.</td></tr>
+        <tr><td><b>Usabilidad</b></td><td>Menú lateral por rol, formularios consistentes y horarios ocupados tachados en la agenda.</td></tr>
+      </table>
+      <div class="rejilla c3" style="margin-top:18px">
+        <div class="tarjeta" style="text-align:center"><div style="font-size:26px;font-weight:800;color:var(--teal-dark)">11</div><div style="color:var(--muted);font-size:13.5px">suites pytest en backend, incluidas <b>concurrencia real</b>, consultas y auditoría</div></div>
+        <div class="tarjeta" style="text-align:center"><div style="font-size:26px;font-weight:800;color:var(--teal-dark)">7</div><div style="color:var(--muted);font-size:13.5px">suites de frontend: clientes de API, sesión y flujo del conflicto 409</div></div>
+        <div class="tarjeta" style="text-align:center"><div style="font-size:26px;font-weight:800;color:var(--green-dark)">DoD</div><div style="color:var(--muted);font-size:13.5px">criterios de aceptación en verde + <b>revisión de pares</b> + auditoría verificada</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="cabecera">
+      <span class="kicker">Sprint 1 · 44 puntos</span>
+      <h2>Cómo repartimos el sprint</h2>
+      <p class="lead">Backlog priorizado con MoSCoW: nueve historias Must asignadas por responsable. Cada historia salió solo cuando cumplió los criterios Dado/Cuando/Entonces, pruebas en verde y revisión de pares.</p>
+    </div>
+    <div class="cuerpo">
+      <div class="rejilla c3">
+        <div class="tarjeta">
+          <div class="rol" style="margin-bottom:12px">
+            <div class="icono" style="font-weight:800;font-size:14px">CC</div>
+            <div><h4>Carlos Chavez Oliva</h4><p>Scrum Master · <span class="mono" style="font-size:12px">db/ · pacientes · recetas · auditoría</span></p></div>
+          </div>
+          <div class="rejilla" style="gap:8px">
+            <div class="hu" style="background:var(--green-soft);border-radius:10px;padding:8px 12px"><span class="estado ok"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> HU01 · Pacientes <b style="margin-left:auto">5 pts</b></div>
+            <div class="hu" style="background:var(--green-soft);border-radius:10px;padding:8px 12px"><span class="estado ok"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> HU04 · Recetas <b style="margin-left:auto">5 pts</b></div>
+            <div class="hu" style="background:var(--green-soft);border-radius:10px;padding:8px 12px"><span class="estado ok"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> HU10 · Anulación <b style="margin-left:auto">3 pts</b></div>
+          </div>
+          <div style="margin-top:12px;font-size:13px;color:var(--muted)">13 / 13 pts completados</div>
+        </div>
+        <div class="tarjeta">
+          <div class="rol" style="margin-bottom:12px">
+            <div class="icono verde" style="font-weight:800;font-size:14px">AV</div>
+            <div><h4>Ángel Vargas Ponce</h4><p>Developer · <span class="mono" style="font-size:12px">núcleo · autenticación · consultas</span></p></div>
+          </div>
+          <div class="rejilla" style="gap:8px">
+            <div class="hu" style="background:var(--green-soft);border-radius:10px;padding:8px 12px"><span class="estado ok"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> HU09 · Login por roles <b style="margin-left:auto">5 pts</b></div>
+            <div class="hu" style="background:var(--green-soft);border-radius:10px;padding:8px 12px"><span class="estado ok"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> HU02 · Registrar consulta <b style="margin-left:auto">5 pts</b></div>
+            <div class="hu" style="background:var(--green-soft);border-radius:10px;padding:8px 12px"><span class="estado ok"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> HU03 · Historia unificada <b style="margin-left:auto">8 pts</b></div>
+          </div>
+          <div style="margin-top:12px;font-size:13px;color:var(--muted)">18 / 18 pts completados</div>
+        </div>
+        <div class="tarjeta">
+          <div class="rol" style="margin-bottom:12px">
+            <div class="icono" style="font-weight:800;font-size:14px">GA</div>
+            <div><h4>Gonzalo Albornoz Azurza</h4><p>Product Owner · <span class="mono" style="font-size:12px">m2_agenda · frontend</span></p></div>
+          </div>
+          <div class="rejilla" style="gap:8px">
+            <div class="hu" style="background:var(--green-soft);border-radius:10px;padding:8px 12px"><span class="estado ok"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> HU06 · Disponibilidad <b style="margin-left:auto">5 pts</b></div>
+            <div class="hu" style="background:var(--green-soft);border-radius:10px;padding:8px 12px"><span class="estado ok"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> HU07 · Registro de citas <b style="margin-left:auto">5 pts</b></div>
+            <div class="hu" style="background:var(--green-soft);border-radius:10px;padding:8px 12px"><span class="estado ok"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> HU08 · Anti-duplicidad <b style="margin-left:auto">3 pts</b></div>
+          </div>
+          <div style="margin-top:12px;font-size:13px;color:var(--muted)">13 / 13 pts completados</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="cabecera">
+      <span class="kicker">Balance del sprint</span>
+      <h2>Qué funciona hoy y qué sigue</h2>
+    </div>
+    <div class="cuerpo">
+      <div class="dos-col">
+        <div>
+          <div class="col-titulo">Implementado · 44 / 44 pts</div>
+          <div class="rejilla" style="gap:7px">
+            <div class="tarjeta hu" style="padding:8px 16px"><span class="estado ok"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> HU09 · Inicio de sesión por roles <span style="margin-left:auto;color:var(--muted);font-size:12px">5 pts</span></div>
+            <div class="tarjeta hu" style="padding:8px 16px"><span class="estado ok"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> HU01 · Registro y búsqueda de pacientes <span style="margin-left:auto;color:var(--muted);font-size:12px">5 pts</span></div>
+            <div class="tarjeta hu" style="padding:8px 16px"><span class="estado ok"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> HU02 · Registro de consulta clínica <span style="margin-left:auto;color:var(--muted);font-size:12px">5 pts</span></div>
+            <div class="tarjeta hu" style="padding:8px 16px"><span class="estado ok"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> HU03 · Historia clínica unificada <span style="margin-left:auto;color:var(--muted);font-size:12px">8 pts</span></div>
+            <div class="tarjeta hu" style="padding:8px 16px"><span class="estado ok"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> HU06 · Disponibilidad por especialidad y médico <span style="margin-left:auto;color:var(--muted);font-size:12px">5 pts</span></div>
+            <div class="tarjeta hu" style="padding:8px 16px"><span class="estado ok"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> HU07 · Registro de citas médicas <span style="margin-left:auto;color:var(--muted);font-size:12px">5 pts</span></div>
+            <div class="tarjeta hu" style="padding:8px 16px"><span class="estado ok"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> HU08 · Prevención de duplicidad de horarios <span style="margin-left:auto;color:var(--muted);font-size:12px">3 pts</span></div>
+            <div class="tarjeta hu" style="padding:8px 16px"><span class="estado ok"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> HU04 · Recetas e indicaciones <span style="margin-left:auto;color:var(--muted);font-size:12px">5 pts</span></div>
+            <div class="tarjeta hu" style="padding:8px 16px"><span class="estado ok"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span> HU10 · Anulación de consultas <span style="margin-left:auto;color:var(--muted);font-size:12px">3 pts</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="col-titulo">Lo que sigue</div>
+          <div class="rejilla" style="gap:10px">
+            <div class="tarjeta rol"><div class="icono"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+              <div><h4>Pantalla del médico (frontend)</h4><p>Conectar «Historia clínica» con el registro de atención y la línea de tiempo (HU02/HU03), más los componentes de recetas (HU04) y anulación (HU10), ya construidos y probados.</p></div></div>
+            <div class="tarjeta rol"><div class="icono ambar"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+              <div><h4>Sprint 2 · Should</h4><p>HU11 · Confirmar o cancelar citas (3 pts) y HU05 · Recordatorios automáticos (5 pts), según el backlog priorizado.</p></div></div>
+          </div>
+          <div class="barra-avance" style="margin:18px 0 8px"><div style="width:100%"></div></div>
+          <div style="color:var(--muted);font-size:13px"><b>100 %</b> del backlog del Sprint 1 (44 / 44 pts) en funcionamiento</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="cabecera">
+      <span class="kicker">Demo</span>
+      <h2>Levantar el sistema en tres comandos</h2>
+    </div>
+    <div class="cuerpo">
+      <div class="rejilla c3">
+        <div class="tarjeta">
+          <div class="col-titulo">1 · Base de datos</div>
+          <div class="codigo">docker compose up</div>
+          <p style="color:var(--muted);font-size:13px;margin-top:10px">Crea el esquema desde <span class="mono">db/01_esquema.sql</span> con datos ficticios.</p>
+        </div>
+        <div class="tarjeta">
+          <div class="col-titulo">2 · Backend</div>
+          <div class="codigo">uvicorn aplicacion.principal:aplicacion<br>--reload</div>
+          <p style="color:var(--muted);font-size:13px;margin-top:10px">API en <span class="mono">localhost:8000/docs</span> con salud y BD verificables.</p>
+        </div>
+        <div class="tarjeta">
+          <div class="col-titulo">3 · Frontend</div>
+          <div class="codigo">npm run dev</div>
+          <p style="color:var(--muted);font-size:13px;margin-top:10px">Portal en <span class="mono">localhost:5173</span> con login real por roles.</p>
+        </div>
+      </div>
+      <div class="destacado teal" style="margin-top:20px">
+        Datos demo C2: <b>4 cuentas</b> (una por rol), especialidades, médicos, pacientes, citas y consultas — todo <b>ficticio</b> y solo para desarrollo.
+      </div>
+      <div style="margin-top:26px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div style="font-size:clamp(22px,2.6vw,32px);font-weight:800;letter-spacing:-.02em">Gracias — ¿preguntas?</div>
+        <div class="chips">
+          <span class="chip">Problema y visión · Ángel</span>
+          <span class="chip">Requerimientos · Carlos</span>
+          <span class="chip">Arquitectura y demo · Gonzalo</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="controles">
+  <div class="marca">SW705 · Clínica San Rafael · Grupo 5</div>
+  <div class="puntos" id="puntos"></div>
+  <div class="nav">
+    <button id="btnPrev" aria-label="Anterior">←</button>
+    <span id="contador">1 / 15</span>
+    <button id="btnNext" aria-label="Siguiente">→</button>
+  </div>
+</footer>
+
+<script>
+  const diapositivas = Array.from(document.querySelectorAll('.slide'));
+  const puntos = document.getElementById('puntos');
+  const barra = document.getElementById('barra');
+  const contador = document.getElementById('contador');
+  let actual = 0;
+
+  diapositivas.forEach((_, i) => {
+    const b = document.createElement('button');
+    b.setAttribute('aria-label', 'Diapositiva ' + (i + 1));
+    b.addEventListener('click', () => ir(i));
+    puntos.appendChild(b);
+  });
+
+  function ir(i) {
+    actual = Math.max(0, Math.min(diapositivas.length - 1, i));
+    diapositivas.forEach((d, idx) => d.classList.toggle('activa', idx === actual));
+    Array.from(puntos.children).forEach((p, idx) => p.classList.toggle('activo', idx === actual));
+    barra.style.width = ((actual + 1) / diapositivas.length * 100) + '%';
+    contador.textContent = (actual + 1) + ' / ' + diapositivas.length;
+  }
+
+  document.getElementById('btnPrev').addEventListener('click', () => ir(actual - 1));
+  document.getElementById('btnNext').addEventListener('click', () => ir(actual + 1));
+
+  document.addEventListener('keydown', (e) => {
+    if (['ArrowRight', ' ', 'PageDown'].includes(e.key)) { e.preventDefault(); ir(actual + 1); }
+    else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); ir(actual - 1); }
+    else if (e.key === 'Home') { e.preventDefault(); ir(0); }
+    else if (e.key === 'End') { e.preventDefault(); ir(diapositivas.length - 1); }
+  });
+
+  let toqueX = null;
+  document.addEventListener('touchstart', (e) => { toqueX = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', (e) => {
+    if (toqueX === null) return;
+    const dx = e.changedTouches[0].clientX - toqueX;
+    if (Math.abs(dx) > 60) ir(actual + (dx < 0 ? 1 : -1));
+    toqueX = null;
+  }, { passive: true });
+
+  ir(0);
+</script>
+</body>
+</html>
