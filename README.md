@@ -54,15 +54,28 @@ Comprobar en `http://localhost:8000/salud` y la documentación en `http://localh
 
 El archivo `.env` se lee automáticamente al arrancar. Para comprobar la conexión con la base de datos abre `http://localhost:8000/salud/base-datos`: responde 503 hasta que la base de datos esté levantada.
 
-**Base de datos:** pendiente de Carlos (tarea C1): `docker compose up` creará las tablas desde `db/01_esquema.sql`.
+**Base de datos:** `docker compose up` crea las tablas desde `db/01_esquema.sql` y los permisos de `db/02_permisos.sql`.
 
-**Frontend:** pendiente de Gonzalo (tarea G1).
+**Frontend** (desde la carpeta `frontend`):
 
-**Pruebas** (desde `backend`): `pytest`
+```bash
+npm install
+npm run dev
+```
 
-## Autenticación simulada (mientras no exista el login real)
+Abre `http://localhost:5173`. Vite redirige las rutas de la API al backend del
+puerto 8000. Detalle de sesión, roles y modo simulado en
+[frontend/README.md](frontend/README.md).
 
-Con `AUTENTICACION_SIMULADA=true` en `.env`, las rutas protegidas usan un usuario ficticio. Cambia `ROL_SIMULADO` (`ADMISION`, `MEDICO` o `ADMINISTRADOR`) para probar los permisos y los 403. Angel reemplaza esto con el login real en la HU09.
+**Pruebas:** `pytest` desde `backend` y `npm run prueba` desde `frontend`.
+
+## Autenticación
+
+El login real de HU09 está disponible en `POST /auth/login`; devuelve un JWT que
+el frontend envía como `Bearer`. Con `AUTENTICACION_SIMULADA=true` en `.env`,
+las rutas protegidas sin token usan un usuario ficticio para desarrollo. Cambia
+`ROL_SIMULADO` (`ADMISION`, `MEDICO` o `ADMINISTRADOR`) para probar permisos y 403.
+No uses la autenticación simulada en demostraciones.
 
 ## Cómo trabajamos
 
@@ -103,5 +116,4 @@ QA completo (requiere Docker; descarga Python 3.11 y `argon2-cffi==23.1.0`
 en un contenedor temporal):
 `powershell -NoProfile -ExecutionPolicy Bypass -File db/ejecutar_pruebas.ps1`.
 No carga desarrollo. Los hashes se verifican con la dependencia Argon2
-declarada; HU09 aún no implementa login ni validación HTTP de estas cuentas.
-La autenticación simulada sigue usando el usuario fijo del backend.
+declarada; el login de HU09 ya valida estas cuentas por HTTP.
