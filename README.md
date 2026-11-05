@@ -77,6 +77,24 @@ las rutas protegidas sin token usan un usuario ficticio para desarrollo. Cambia
 `ROL_SIMULADO` (`ADMISION`, `MEDICO` o `ADMINISTRADOR`) para probar permisos y 403.
 No uses la autenticación simulada en demostraciones.
 
+### Datos del modo simulado
+
+Para que el modo simulado pueda operar el flujo completo del médico, la
+base necesita unos registros ficticios (especialidad, médico, usuario de
+bitácora y un paciente de prueba). Con Docker levantado, desde la raíz:
+
+```powershell
+docker compose cp db/03_modo_simulado.sql postgres:/tmp/03_modo_simulado.sql
+docker compose exec -T postgres psql -X -v ON_ERROR_STOP=1 -U clinica -d clinica_san_rafael -f /tmp/03_modo_simulado.sql
+```
+
+Y para que el panel aparezca en la pantalla de login, crea
+`frontend/.env.local` con `VITE_AUTENTICACION_SIMULADA=true` antes de
+`npm run dev` (ese archivo no se sube al repositorio). Al entrar con el
+panel "Entrar en modo simulado" como Médico podrás registrar atenciones,
+recetas y anulaciones sin login real. Todos los datos son ficticios y
+exclusivos de desarrollo.
+
 ## Cómo trabajamos
 
 Lee [CONVENCIONES.md](CONVENCIONES.md): nombres en español, capas, formato de errores, ramas, commits, revisión de pull requests y Definición de Hecho.
