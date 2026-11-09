@@ -4,7 +4,6 @@ from unittest.mock import patch
 
 import pytest
 
-from prueba_recetas import cliente_recetas, conexion_c3, lote_recetas
 from aplicacion.m1_hce import publico
 from aplicacion.m1_hce.recetas import anulacion_servicio as servicio
 from aplicacion.m1_hce.recetas.anulacion_esquemas import SolicitudAnulacion

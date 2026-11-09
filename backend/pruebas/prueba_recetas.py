@@ -1,39 +1,9 @@
 """HU04 sobre PostgreSQL efimero; reutiliza el aislamiento y convenciones C3."""
-from fastapi.testclient import TestClient
 import pytest
 
-from prueba_integracion_c3 import conexion_c3
-from aplicacion.nucleo.base_datos import obtener_conexion
 from aplicacion.nucleo.dependencias import obtener_usuario_actual, UsuarioActual
 from aplicacion.m1_hce import publico
 from aplicacion.m1_hce.recetas import servicio, repositorio
-
-
-@pytest.fixture
-def cliente_recetas(aplicacion_prueba, conexion_c3):
-    conexion_c3.execute("INSERT INTO especialidades(id_especialidad,nombre) OVERRIDING SYSTEM VALUE VALUES(970101,'Especialidad Ficticia HU04')")
-    conexion_c3.execute("""INSERT INTO medicos(id_medico,nombres,apellidos,numero_colegiatura,id_especialidad)
-        OVERRIDING SYSTEM VALUE VALUES(970101,'Medico Ficticio','HU04','FICTICIO-HU04',970101)""")
-    conexion_c3.execute("""INSERT INTO usuarios(id_usuario,correo,contrasena_hash,rol,id_medico)
-        OVERRIDING SYSTEM VALUE VALUES(970002,'medico.hu04@example.invalid','hash-ficticio-no-login','MEDICO',970101)""")
-    conexion_c3.execute("""INSERT INTO consultas_medicas(id_consulta,id_paciente,id_medico,fecha_hora)
-        OVERRIDING SYSTEM VALUE VALUES(970201,970001,970101,'2026-10-01 09:00')""")
-    def conexion_solicitud():
-        with conexion_c3.transaction():
-            yield conexion_c3
-    aplicacion_prueba.dependency_overrides[obtener_conexion] = conexion_solicitud
-    aplicacion_prueba.dependency_overrides[obtener_usuario_actual] = lambda: UsuarioActual(
-        id_usuario=970002, correo="medico.hu04@example.invalid", rol="MEDICO", id_medico=970101)
-    yield TestClient(aplicacion_prueba)
-    aplicacion_prueba.dependency_overrides.clear()
-
-
-@pytest.fixture
-def lote_recetas():
-    return {"recetas": [{"medicamento": "Producto ficticio (no administrar)",
-                         "dosis": "Dosis ilustrativa", "frecuencia": "Frecuencia ficticia",
-                         "duracion": "Duracion ilustrativa", "indicaciones": "Solo pruebas de software"}],
-            "indicaciones": [{"descripcion": "Indicacion ficticia independiente"}]}
 
 
 @pytest.mark.parametrize("tipo", ["recetas", "indicaciones", "ambos"])

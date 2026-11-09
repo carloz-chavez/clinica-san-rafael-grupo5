@@ -7,7 +7,6 @@ import os
 from datetime import datetime
 
 import psycopg
-from psycopg.conninfo import conninfo_to_dict
 from psycopg.errors import ForeignKeyViolation, RaiseException, UniqueViolation
 from psycopg.rows import dict_row
 import pytest
@@ -16,29 +15,6 @@ from aplicacion.m1_hce.publico import obtener_paciente
 from aplicacion.nucleo.auditoria import registrar_bitacora
 from aplicacion.nucleo.constantes import ACCIONES_BITACORA
 from aplicacion.nucleo.errores import ErrorNegocio
-
-
-@pytest.fixture
-def conexion_c3():
-    destino = os.getenv("C3_BASE_DATOS_QA")
-    if not destino:
-        pytest.skip("C3_BASE_DATOS_QA no definida; integracion solo en PostgreSQL efimero")
-    assert conninfo_to_dict(destino).get("dbname") == "clinica_c3_qa", "Se requiere base QA exclusiva"
-    with psycopg.connect(destino, row_factory=dict_row, connect_timeout=3) as conexion:
-        try:
-            conexion.execute("""
-                INSERT INTO usuarios(id_usuario,correo,contrasena_hash,rol)
-                OVERRIDING SYSTEM VALUE
-                VALUES(970001,'c3@example.invalid','hash-ficticio-no-login','ADMINISTRADOR')
-            """)
-            conexion.execute("""
-                INSERT INTO pacientes(id_paciente,dni,nombres,apellidos,fecha_nacimiento)
-                OVERRIDING SYSTEM VALUE
-                VALUES(970001,'00970001','Paciente Ficticio','Ejemplo C3','2000-01-01')
-            """)
-            yield conexion
-        finally:
-            conexion.rollback()
 
 
 @pytest.mark.parametrize("accion", ACCIONES_BITACORA)
