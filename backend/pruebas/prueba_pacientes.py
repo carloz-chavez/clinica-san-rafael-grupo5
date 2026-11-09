@@ -2,7 +2,6 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from prueba_integracion_c3 import conexion_c3  # Reutiliza el aislamiento QA existente.
 from aplicacion.nucleo.base_datos import obtener_conexion
 from aplicacion.nucleo.dependencias import obtener_usuario_actual, UsuarioActual
 from aplicacion.m1_hce.pacientes import servicio

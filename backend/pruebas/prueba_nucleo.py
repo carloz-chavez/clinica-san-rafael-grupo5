@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from pydantic import BaseModel
 
 from aplicacion import principal
-from aplicacion.nucleo.configuracion import obtener_configuracion
+from aplicacion.nucleo.configuracion import Configuracion, obtener_configuracion
 from aplicacion.nucleo.constantes import ROL_MEDICO
 from aplicacion.nucleo.dependencias import UsuarioActual, requerir_roles
 from aplicacion.nucleo.errores import ErrorNegocio
@@ -62,7 +62,8 @@ def probar_base_datos_no_disponible_sin_pool():
 
 def probar_configuracion_valores_por_defecto(monkeypatch):
     monkeypatch.delenv("AUTENTICACION_SIMULADA", raising=False)
-    configuracion = obtener_configuracion()
+    monkeypatch.delenv("ORIGENES_PERMITIDOS", raising=False)
+    configuracion = Configuracion(_env_file=None)
     assert configuracion.autenticacion_simulada is False
     assert configuracion.lista_origenes_permitidos == ["http://localhost:5173"]
 

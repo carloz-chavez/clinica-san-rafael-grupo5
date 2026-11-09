@@ -5,7 +5,6 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 import pytest
 
-from prueba_integracion_c3 import conexion_c3
 from aplicacion.m2_agenda.citas.esquemas import SolicitudCita
 from aplicacion.m2_agenda.disponibilidad import servicio as disponibilidad
 from aplicacion.nucleo.base_datos import obtener_conexion

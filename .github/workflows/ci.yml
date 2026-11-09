@@ -10,6 +10,24 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Credenciales ficticias, exclusivas del contenedor desechable de este job.
+    services:
+      postgres-qa:
+        image: postgres:16
+        env:
+          POSTGRES_USER: clinica_ci
+          POSTGRES_PASSWORD: solo-qa-ci
+          POSTGRES_DB: clinica_c3_qa
+        ports:
+          - 5432/tcp
+        options: >-
+          --tmpfs /var/lib/postgresql/data
+          --health-cmd "pg_isready -U clinica_ci -d clinica_c3_qa"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
 
     defaults:
       run:
@@ -34,5 +52,18 @@ jobs:
       - name: Revisar estilo con Ruff
         run: ruff check --select E4,E7,E9,F aplicacion pruebas
 
+      - name: Inicializar PostgreSQL QA y verificar permisos
+        env:
+          QA_CONTAINER: ${{ job.services.postgres-qa.id }}
+        run: |
+          # psql de la propia imagen: no depende del cliente instalado en el runner.
+          for script in ../db/qa/00_precondiciones.sql ../db/01_esquema.sql ../db/02_permisos.sql; do
+            docker exec -i "$QA_CONTAINER" psql -X --set=ON_ERROR_STOP=1 \
+              --username=clinica_ci --dbname=clinica_c3_qa < "$script"
+          done
+
       - name: Ejecutar pruebas con cobertura
-        run: python -m pytest --cov=aplicacion --cov-fail-under=80
+        env:
+          C3_BASE_DATOS_QA: postgresql://clinica_ci:solo-qa-ci@127.0.0.1:${{ job.services.postgres-qa.ports[5432] }}/clinica_c3_qa
+          AUTENTICACION_SIMULADA: "false"
+        run: python -m pytest -q --cov=aplicacion --cov-fail-under=80
