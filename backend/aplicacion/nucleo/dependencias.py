@@ -10,9 +10,9 @@ Uso en rutas protegidas:
     def registrar_consulta(usuario: UsuarioActual = Depends(requerir_roles(ROL_MEDICO))):
         ...
 """
+import jwt
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-import jwt
 from pydantic import BaseModel
 
 from aplicacion.nucleo.configuracion import obtener_configuracion
@@ -59,6 +59,7 @@ def obtener_usuario_actual(
             token,
             configuracion.clave_secreta_jwt,
             algorithms=[configuracion.algoritmo_jwt],
+            options={"require": ["exp", "sub", "id_usuario", "correo", "rol"]},
         )
     except jwt.ExpiredSignatureError:
         raise ErrorNegocio("TOKEN_EXPIRADO", "La sesion ha expirado.", 401)
@@ -69,7 +70,15 @@ def obtener_usuario_actual(
     correo = payload.get("correo")
     rol = payload.get("rol")
 
-    if not id_usuario or not correo or not rol or rol not in ROLES_VALIDOS:
+    id_medico = payload.get("id_medico")
+    if (
+        type(id_usuario) is not int or id_usuario <= 0
+        or not isinstance(correo, str) or not correo
+        or not isinstance(rol, str) or rol not in ROLES_VALIDOS
+        or payload.get("sub") != str(id_usuario)
+        or (rol == ROL_MEDICO and (type(id_medico) is not int or id_medico <= 0))
+        or (rol != ROL_MEDICO and id_medico is not None)
+    ):
         raise ErrorNegocio("TOKEN_INVALIDO", "El token no contiene informacion valida de usuario.", 401)
 
     return UsuarioActual(

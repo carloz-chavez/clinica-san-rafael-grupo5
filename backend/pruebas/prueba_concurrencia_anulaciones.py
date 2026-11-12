@@ -1,20 +1,20 @@
-"""Carreras reales C5/C6 en una base creada y eliminada exclusivamente por QA.
+"""Carreras reales C5/C6 en una base creada exclusivamente por QA.
 
 Requiere C3_BASE_DATOS_QA (clinica_c3_qa) y permiso CREATEDB en el servidor QA.
 Las sesiones se coordinan observando pg_blocking_pids; no dependen de sleeps.
 """
-from concurrent.futures import ThreadPoolExecutor
 import os
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Event
 from time import monotonic
 from uuid import uuid4
 
 import psycopg
+import pytest
 from psycopg import sql
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 from psycopg.rows import dict_row
-import pytest
 
 from aplicacion.m1_hce.recetas import anulacion_servicio, servicio
 from aplicacion.m1_hce.recetas.anulacion_esquemas import SolicitudAnulacion
@@ -33,21 +33,18 @@ def destino_concurrencia():
     destino = make_conninfo(origen, dbname=nombre)
     with psycopg.connect(origen, autocommit=True) as administracion:
         administracion.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(nombre)))
-        try:
-            with psycopg.connect(destino, autocommit=True) as conexion:
-                conexion.execute((Path(__file__).resolve().parents[2] / "db/01_esquema.sql").read_text(encoding="utf-8"))
-                conexion.execute("""
-                    INSERT INTO especialidades(id_especialidad,nombre) OVERRIDING SYSTEM VALUE VALUES(980001,'QA HU10');
-                    INSERT INTO medicos(id_medico,nombres,apellidos,numero_colegiatura,id_especialidad)
-                    OVERRIDING SYSTEM VALUE VALUES(980001,'Medico','Ficticio','QA-HU10',980001);
-                    INSERT INTO usuarios(id_usuario,correo,contrasena_hash,rol,id_medico)
-                    OVERRIDING SYSTEM VALUE VALUES(980001,'hu10@example.invalid','no-login','MEDICO',980001);
-                    INSERT INTO pacientes(id_paciente,dni,nombres,apellidos,fecha_nacimiento)
-                    OVERRIDING SYSTEM VALUE VALUES(980001,'00980001','Paciente','Ficticio','2000-01-01');
-                """)
-            yield destino
-        finally:
-            administracion.execute(sql.SQL("DROP DATABASE {} WITH (FORCE)").format(sql.Identifier(nombre)))
+        with psycopg.connect(destino, autocommit=True) as conexion:
+            conexion.execute((Path(__file__).resolve().parents[2] / "db/01_esquema.sql").read_text(encoding="utf-8"))
+            conexion.execute("""
+                INSERT INTO especialidades(id_especialidad,nombre) OVERRIDING SYSTEM VALUE VALUES(980001,'QA HU10');
+                INSERT INTO medicos(id_medico,nombres,apellidos,numero_colegiatura,id_especialidad)
+                OVERRIDING SYSTEM VALUE VALUES(980001,'Medico','Ficticio','QA-HU10',980001);
+                INSERT INTO usuarios(id_usuario,correo,contrasena_hash,rol,id_medico)
+                OVERRIDING SYSTEM VALUE VALUES(980001,'hu10@example.invalid','no-login','MEDICO',980001);
+                INSERT INTO pacientes(id_paciente,dni,nombres,apellidos,fecha_nacimiento)
+                OVERRIDING SYSTEM VALUE VALUES(980001,'00980001','Paciente','Ficticio','2000-01-01');
+            """)
+        yield destino
 
 
 @pytest.mark.parametrize("primera,segunda,codigo,recetas", [

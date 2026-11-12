@@ -10,7 +10,9 @@ Uso:
 """
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # backend/aplicacion/nucleo/configuracion.py -> la raiz del repositorio esta 3 niveles arriba
@@ -29,9 +31,18 @@ class Configuracion(BaseSettings):
     algoritmo_jwt: str = "HS256"
     expiracion_token_minutos: int = 60
     autenticacion_simulada: bool = False
+    entorno: Literal["local", "pruebas", "produccion"] = "local"
     rol_simulado: str = "MEDICO"
     # Origenes del frontend permitidos por CORS, separados por comas
     origenes_permitidos: str = "http://localhost:5173"
+
+    @model_validator(mode="after")
+    def validar_modo_simulado(self):
+        if self.entorno == "produccion" and self.autenticacion_simulada:
+            raise ValueError("La autenticacion simulada esta prohibida en produccion.")
+        if self.rol_simulado.upper() not in {"MEDICO", "ADMISION", "ADMINISTRADOR"}:
+            raise ValueError("ROL_SIMULADO no valido.")
+        return self
 
     @property
     def lista_origenes_permitidos(self) -> list[str]:

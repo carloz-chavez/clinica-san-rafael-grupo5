@@ -160,6 +160,10 @@ frontend/.vite
 
 # Environments
 .env
+/respaldos/
+/reportes_qa/
+*.dump
+/db/desarrollo/cuentas_ficticias.json
 .envrc
 .venv
 env/
