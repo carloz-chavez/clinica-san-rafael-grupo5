@@ -1,3 +1,4 @@
+param([switch]$ExcluirTruncate, [string]$ImagenPython = 'python:3.11-slim')
 # Pruebas aisladas: no monta volumenes ni se conecta a PostgreSQL de desarrollo.
 $ErrorActionPreference = 'Stop'
 $nombreQa = 'clinica-usuarios-qa-' + [guid]::NewGuid().ToString('N').Substring(0,8)
@@ -12,6 +13,8 @@ function DockerOk([string[]]$Argumentos) {
 try {
     DockerOk @('run','-d','--name',$nombreQa,'--label','clinica.qa=usuarios',
         '--mount','type=tmpfs,destination=/var/lib/postgresql/data',
+        '--mount',"type=bind,source=$raizProyecto/db/01_esquema.sql,target=/docker-entrypoint-initdb.d/01_esquema.sql,readonly",
+        '--mount',"type=bind,source=$raizProyecto/db/02_permisos.sql,target=/docker-entrypoint-initdb.d/02_permisos.sql,readonly",
         '-e','POSTGRES_HOST_AUTH_METHOD=trust','-e','POSTGRES_USER=clinica',
         '-e','POSTGRES_DB=clinica_usuarios_qa','postgres:16')
     $qaCreado = $true
@@ -32,18 +35,22 @@ try {
         '-e','USUARIOS_BASE_DATOS_QA=postgresql://clinica@localhost:5432/clinica_usuarios_qa',
         '-e','C3_BASE_DATOS_QA=postgresql://clinica@localhost:5432/clinica_c3_qa',
         '-e','FLUJO_BASE_DATOS_QA=postgresql://clinica@localhost:5432/clinica_flujo_qa',
-        'python:3.11-slim','sleep','900')
+        '-e','EQUIPO_BASE_DATOS_QA=postgresql://clinica@localhost:5432/clinica_equipo_qa',
+        '-e','EQUIPO_CREDENCIALES_ARCHIVO=/tmp/cuentas_equipo_qa.json',
+        $ImagenPython,'sleep','900')
     $pythonCreado=$true
-    DockerOk @('exec',$nombrePython,'pip','install','--disable-pip-version-check','-q',
-        '-r','/repo/backend/requirements.txt','ruff')
+    $paquetesListos = DockerOk @('exec',$nombrePython,'python','-c',
+        "import importlib.util; print(all(importlib.util.find_spec(m) for m in ('fastapi','psycopg','pydantic_settings','jwt','argon2','pytest','httpx','ruff')))")
+    if ($paquetesListos.Trim() -ne 'True') {
+        DockerOk @('exec',$nombrePython,'pip','install','--disable-pip-version-check','--timeout','20','--retries','1','-q',
+            '-r','/repo/backend/requirements.txt','ruff')
+    }
+    DockerOk @('exec',$nombrePython,'python','-c',
+        "import json,secrets; from pathlib import Path; from administracion.configurar_usuarios import CUENTAS; p=Path('/repo/db/desarrollo/cuentas_ficticias.json'); datos=json.loads(p.read_text()) if p.exists() else {'uso':'academico-local-C2','claves':{c[1]:secrets.token_urlsafe(24) for c in CUENTAS}}; Path('/tmp/cuentas_equipo_qa.json').write_text(json.dumps(datos))")
     $hashQa = & docker exec $nombrePython python -c 'import secrets; from argon2 import PasswordHasher; print(PasswordHasher().hash(secrets.token_urlsafe(24)))'
     if ($LASTEXITCODE -ne 0) { throw 'No se genero hash QA' }
     DockerOk @('cp',"$PSScriptRoot/.","${nombreQa}:/pruebas")
-    foreach ($archivo in @('01_esquema.sql','02_permisos.sql')) {
-        DockerOk @('exec',$nombreQa,'psql','-X','-q','-v','ON_ERROR_STOP=1','-U','clinica',
-            '-d','clinica_usuarios_qa','-f',"/pruebas/$archivo")
-    }
-    foreach ($baseQa in @('clinica_c3_qa','clinica_flujo_qa')) {
+    foreach ($baseQa in @('clinica_c3_qa','clinica_flujo_qa','clinica_equipo_qa','clinica_san_rafael')) {
         DockerOk @('exec',$nombreQa,'createdb','-U','clinica',$baseQa)
         foreach ($archivo in @('01_esquema.sql','02_permisos.sql')) {
             DockerOk @('exec',$nombreQa,'psql','-X','-q','-v','ON_ERROR_STOP=1','-U','clinica',
@@ -52,17 +59,24 @@ try {
     }
     DockerOk @('exec',$nombreQa,'psql','-X','-q','-v','ON_ERROR_STOP=1','-v',"seed_hash=$hashQa",'-U','clinica',
         '-d','clinica_usuarios_qa','-f','/pruebas/02_seed.sql')
-    DockerOk @('exec',$nombrePython,'ruff','check','--no-cache','--select','E,F,I','--ignore','E501',
+    DockerOk @('exec',$nombrePython,'python','-m','ruff','check','--no-cache','--select','E,F,I','--ignore','E501',
         'administracion','pruebas/prueba_configurar_usuarios.py','pruebas/prueba_nucleo.py',
-        'pruebas/prueba_flujo_autenticado.py',
+        'pruebas/prueba_flujo_autenticado.py','pruebas/prueba_preparar_equipo.py','pruebas/prueba_concurrencia_anulaciones.py',
         'aplicacion/nucleo/configuracion.py','aplicacion/nucleo/dependencias.py',
         'aplicacion/m1_hce/autenticacion/servicio.py')
     $directorioEvidencia = Join-Path $raizProyecto 'reportes_qa'
     New-Item -ItemType Directory -Force $directorioEvidencia | Out-Null
-    DockerOk @('exec',$nombrePython,'python','-m','pytest','-q','--tb=short',
-        '--junitxml=/tmp/pruebas.xml','-p','no:cacheprovider') |
+    $seleccionPruebas = @()
+    if ($ExcluirTruncate) { $seleccionPruebas = @('-k','not TRUNCATE') }
+    DockerOk (@('exec',$nombrePython,'python','-m','pytest','-q','--tb=short',
+        '--junitxml=/tmp/pruebas.xml','-p','no:cacheprovider') + $seleccionPruebas) |
         Tee-Object -FilePath (Join-Path $directorioEvidencia 'pruebas.txt')
     DockerOk @('cp',"${nombrePython}:/tmp/pruebas.xml",(Join-Path $directorioEvidencia 'pruebas.xml'))
+    $comandoEquipoQa = @('exec','-e','BASE_DATOS_URL=postgresql://clinica@localhost:5433/clinica_san_rafael',
+        '-e','ENTORNO=local',$nombrePython,'python','-m','administracion.preparar_equipo')
+    DockerOk ($comandoEquipoQa + @('inspeccionar','--puerto-contenedor'))
+    DockerOk ($comandoEquipoQa + @('aplicar','--puerto-contenedor'))
+    DockerOk ($comandoEquipoQa + @('aplicar','--puerto-contenedor'))
 } finally {
     # Solo contenedores efimeros creados por esta ejecucion; sin volumenes persistentes.
     if ($pythonCreado) { & docker rm -f $nombrePython | Out-Null }

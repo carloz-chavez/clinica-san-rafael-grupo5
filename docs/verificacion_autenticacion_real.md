@@ -1,75 +1,98 @@
-﻿# Validacion de autenticacion e integracion
+﻿# Validación de autenticación
 
-## Alcance y ejecucion
+La autenticación real se comprobó con las siete cuentas C2 y PostgreSQL local.
+Las pruebas que crean o modifican registros se ejecutaron en bases aisladas.
+El equipo también probó el frontend con una cuenta de Admisión.
 
-La autenticacion real se verifico con siete identidades C2 y PostgreSQL local.
-Las pruebas con escrituras se ejecutan exclusivamente en bases QA aisladas.
-El frontend fue probado manualmente por el equipo con una cuenta de Admision;
-esto no sustituye una prueba automatizada de interfaz.
+## Ejecutar las pruebas
 
-Ejecutar desde la raiz:
+Desde la raíz del proyecto:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File db/probar_usuarios.ps1
 ```
 
-El ejecutor prepara `clinica_usuarios_qa`, `clinica_c3_qa` y `clinica_flujo_qa`.
-Las variables USUARIOS_BASE_DATOS_QA, C3_BASE_DATOS_QA y FLUJO_BASE_DATOS_QA solo
-apuntan a ese servidor temporal. Las claves QA son aleatorias y no corresponden
-a cuentas locales. Los reportes generados quedan fuera del repositorio.
+El comando prepara tres bases QA: `clinica_usuarios_qa`, `clinica_c3_qa` y
+`clinica_flujo_qa`. Sus conexiones se pasan mediante `USUARIOS_BASE_DATOS_QA`,
+`C3_BASE_DATOS_QA` y `FLUJO_BASE_DATOS_QA`. Usa claves aleatorias para las cuentas
+de prueba y guarda los resultados en `reportes_qa/`.
 
-## Cobertura permanente
+Las pruebas cubren el login, la firma y expiración del JWT, los permisos por rol
+y el rechazo de credenciales incorrectas o cuentas inactivas. También comprueban
+la configuración de usuarios, el recorrido de paciente a consulta, la persistencia,
+el rollback y la auditoría, incluidas operaciones concurrentes.
 
-- Siete logins y validacion de firma, identidad, rol, medico y expiracion JWT.
-- Rechazo de clave incorrecta, cuenta inactiva, token invalido, vencido o ausente.
-- Conservacion de identidades, unicidad e idempotencia del administrador de cuentas.
-- Rollback ante errores y conservacion de tablas ajenas a usuarios.
-- Login real con pool ASGI y PostgreSQL, sin sustituir autenticacion por mocks.
-- Registro de paciente, reserva de cita, consulta, recetas, indicaciones y anulacion.
-- Lectura de commits desde conexiones independientes y eventos de auditoria.
-- Restricciones FK, inmutabilidad de auditoria y carreras de anulacion/recetas.
+## Permisos actuales
 
-## Permisos implementados
-
-| Operacion | ADMISION | MEDICO | ADMINISTRADOR |
+| Operación | ADMISION | MEDICO | ADMINISTRADOR |
 |---|---|---|---|
-| Registrar/actualizar paciente | Si | No | Si |
-| Leer paciente | Si | Con vinculo asistencial | Si |
-| Consultar/reservar citas | Si | No | Si |
-| Registrar consulta | No | Identidad tomada del JWT | No |
-| Leer consulta/historia | No | Por rol; ver pendientes | No |
-| Recetas/indicaciones/anulacion | No | Solo responsable | No |
+| Registrar o actualizar paciente | Sí | No | Sí |
+| Leer paciente | Sí | Con vínculo asistencial | Sí |
+| Consultar o reservar citas | Sí | No | Sí |
+| Registrar consulta | No | Con su identidad JWT | No |
+| Leer consulta o historia | No | Por rol; ver pendientes | No |
+| Recetar, indicar o anular | No | Solo el responsable | No |
 
-La cita de otro medico se rechaza al registrar una consulta. Enviar un campo
-id_medico extra no suplanta al profesional: el servicio usa la identidad JWT.
-El medico ajeno no puede recetar ni anular la consulta de otro.
+El backend rechaza una consulta asociada a la cita de otro médico. Enviar un
+`id_medico` distinto no cambia la identidad tomada del JWT. Tampoco permite
+recetar ni anular una consulta de otro profesional.
 
-## Validacion registrada el 12/11/2026
+## Resultados del 12/11/2026
 
-Las siete cuentas locales iniciaron sesion y sus JWT se comprobaron sin
-registrar secretos. Salud, salud/base-datos y OpenAPI respondieron correctamente.
-Uvicorn temporal se detuvo tras las pruebas. Las diez tablas locales, sus
-restricciones, permisos y secuencias conservaron su estado; ninguna prueba
-clinica con escrituras se dirigio a desarrollo.
+Las siete cuentas iniciaron sesión y sus tokens contenían la identidad, el rol
+y la relación médica esperados. `/salud`, `/salud/base-datos` y `/openapi.json`
+respondieron correctamente. Uvicorn se detuvo al terminar y las diez tablas
+locales conservaron sus datos, restricciones, permisos y secuencias.
 
-La suite QA completa aprobo 218 pruebas sin omisiones. Ruff E/F/I, excepto E501,
-paso en los archivos de esta tarea. El analisis completo del backend detecto
-52 hallazgos heredados, presentes tambien en HEAD: 15 I001, 7 F401 y 30 F811.
-Existe una advertencia de deprecacion Starlette/httpx. Los resultados historicos
-no sustituyen ejecutar las pruebas sobre cambios posteriores.
+Pytest aprobó **218 pruebas sin omisiones**. Ruff pasó en los archivos de esta
+tarea con las reglas E/F/I, excepto E501. En el backend completo quedaron 52
+hallazgos anteriores: 15 I001, 7 F401 y 30 F811. También se detectó una advertencia
+de deprecación de Starlette/httpx. Ejecuta las pruebas nuevamente después de
+cada cambio; estas cifras corresponden a esa validación.
 
-## Pendientes antes de produccion
+## Preparación compartida del equipo
 
-1. Las rutas de agenda no admiten MEDICO: acordar su contrato antes de ampliar acceso.
-2. Historia y consulta individual admiten MEDICO sin exigir vinculo asistencial,
-   a diferencia de pacientes. La prueba caracteriza esta inconsistencia actual;
-   no demuestra aislamiento clinico completo. Requiere decision de negocio.
-3. La lectura individual de consultas y las reservas no registran auditoria;
-   la historia y las operaciones clinicas de escritura si la registran.
-4. Configurar una clave JWT robusta antes de desplegar y decidir politica de
-   revocacion. Las claves academicas nunca son credenciales de produccion.
-5. Resolver lint heredado y fijar versiones de dependencias para mayor reproducibilidad.
-6. Ampliar las pruebas de interfaz a los tres roles.
+El inicializador del equipo reutiliza el seed C2 y el administrador de cuentas.
+Se probó en PostgreSQL 16 aislado, con los mismos scripts de inicio que monta
+Compose: diez tablas, roles y permisos técnicos. La carga desde vacío dejó siete
+cuentas con claves académicas válidas; repetirla conservó todos los hashes.
+También se comprobaron cuatro cuentas existentes, confirmación y respaldo
+obligatorios, conservación clínica y rollback completo ante un fallo final.
 
-No se ampliaron permisos ni se cambiaron reglas de negocio para obtener pruebas
-aprobadas. Ver [configuracion y mantenimiento](configuracion_usuarios.md).
+La ejecución QA para este cambio aprobó 227 pruebas y excluyó un caso que envía
+TRUNCATE, porque esta tarea prohíbe usar esa sentencia. No se cuenta como aprobado.
+Las bases auxiliares de concurrencia se conservan hasta retirar el servidor QA;
+la suite ya no ejecuta DROP DATABASE. Ruff pasó en los archivos modificados.
+
+La descarga inicial de dependencias se bloqueó. Se repitió la validación con una
+imagen QA que contiene únicamente dependencias ya instaladas, sin código ni
+credenciales del proyecto:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File db/probar_usuarios.ps1 -ExcluirTruncate -ImagenPython clinica-python-qa:equipo
+```
+
+La sintaxis y la validación de destinos del script PowerShell se comprobaron
+por separado. No se ejecutó el asistente completo sobre la base de Carlos:
+esa base y su `.env` se verificaron solo mediante lecturas de conservación.
+La comparación final confirmó que filas, hashes, relaciones, restricciones,
+permisos y secuencias locales no cambiaron. También se comprobó con un build
+aislado que Docker rechaza copiar la configuración ficticia excluida del contexto.
+Las claves compartidas se conservan en un archivo local ignorado; Git contiene
+solo la plantilla vacía. El asistente puede solicitar las siete claves por
+entrada oculta si el integrante aún no tiene la configuración privada.
+
+## Pendientes
+
+- La agenda no admite el rol MEDICO. Hay que acordar su acceso antes de cambiar permisos.
+- La lectura de historias y consultas no exige vínculo asistencial, aunque la
+  lectura de pacientes sí. La prueba documenta esta diferencia; falta resolverla.
+- Las reservas y la lectura individual de consultas no generan auditoría.
+- Antes de producción, configura una clave JWT robusta y define cómo revocar
+  sesiones. Desactivar una cuenta impide nuevos logins, pero no invalida los
+  tokens ya emitidos hasta su vencimiento.
+- Queda por resolver el lint anterior, fijar versiones de dependencias y ampliar
+  las pruebas de interfaz a los tres roles.
+
+Las credenciales académicas son solo para desarrollo. Consulta la
+[guía de configuración](configuracion_usuarios.md) para preparar las cuentas.
