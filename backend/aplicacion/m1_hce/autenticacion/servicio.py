@@ -1,11 +1,15 @@
 """Logica de negocio para autenticacion y generacion de tokens JWT (HU09)."""
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 from psycopg import Connection
 
 from aplicacion.m1_hce.autenticacion import repositorio
-from aplicacion.m1_hce.autenticacion.esquemas import RespuestaLogin, SolicitudLogin, UsuarioSesion
+from aplicacion.m1_hce.autenticacion.esquemas import (
+    RespuestaLogin,
+    SolicitudLogin,
+    UsuarioSesion,
+)
 from aplicacion.nucleo.configuracion import obtener_configuracion
 from aplicacion.nucleo.errores import ErrorNegocio
 from aplicacion.nucleo.seguridad import verify_password
@@ -14,8 +18,9 @@ from aplicacion.nucleo.seguridad import verify_password
 def crear_token_acceso(datos: dict, expiracion_minutos: int | None = None) -> str:
     """Genera un token JWT firmado con el tiempo de expiracion configurado."""
     configuracion = obtener_configuracion()
-    minutos = expiracion_minutos or configuracion.expiracion_token_minutos
-    vencimiento = datetime.now(timezone.utc) + timedelta(minutes=minutos)
+    minutos = (configuracion.expiracion_token_minutos
+               if expiracion_minutos is None else expiracion_minutos)
+    vencimiento = datetime.now(UTC) + timedelta(minutes=minutos)
 
     payload = datos.copy()
     payload.update({"exp": vencimiento})

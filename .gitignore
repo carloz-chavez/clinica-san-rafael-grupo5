@@ -159,6 +159,9 @@ frontend/.env.local
 
 # Environments
 .env
+/respaldos/
+/reportes_qa/
+*.dump
 .envrc
 .venv
 env/

@@ -71,6 +71,10 @@ puerto 8000. Detalle de sesión, roles y modo simulado en
 
 ## Autenticación
 
+Para preparar las siete cuentas C2 con claves independientes, ver
+[procedimiento y diagnostico](docs/configuracion_usuarios.md).
+Su aplicacion a la base local requiere autorizacion y respaldo previos.
+
 El login real de HU09 está disponible en `POST /auth/login`; devuelve un JWT que
 el frontend envía como `Bearer`. Con `AUTENTICACION_SIMULADA=true` en `.env`,
 las rutas protegidas sin token usan un usuario ficticio para desarrollo. Cambia
