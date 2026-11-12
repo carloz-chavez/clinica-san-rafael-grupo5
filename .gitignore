@@ -155,6 +155,7 @@ activemq-data/
 # Frontend
 node_modules/
 frontend/dist/
+frontend/.vite/
 frontend/.env.local
 
 # Environments
